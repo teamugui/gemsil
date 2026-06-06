@@ -1,4 +1,14 @@
-import { EVENTS, api, dispatchAppEvent, fmtCurrency, getCurrency, showToast } from "./helper.js";
+import {
+  EVENTS,
+  api,
+  dispatchAppEvent,
+  formatAmountValue,
+  formatCurrency,
+  formatMonthLabel,
+  formatSavedAt,
+  getCurrency,
+  showToast,
+} from "./helper.js";
 
 let goalInitialized = false;
 let goalCurrency = "KRW";
@@ -27,19 +37,6 @@ export async function initGoalComponent() {
   }
 }
 
-function formatMonthLabel(ym) {
-  if (!ym) return "-";
-  const [y, m] = ym.split("-");
-  return `${y}년 ${parseInt(m, 10)}월`;
-}
-
-function formatSavedAt(s) {
-  const d = new Date(s);
-  if (isNaN(d.getTime())) return "";
-  const p = (n) => String(n).padStart(2, "0");
-  return `${p(d.getMonth() + 1)}월 ${p(d.getDate())}일 ${p(d.getHours())}:${p(d.getMinutes())} 저장`;
-}
-
 async function loadCurrentGoal() {
   const data = await api("/api/expense-goals");
   renderGoal(data);
@@ -64,13 +61,13 @@ function renderGoal(data) {
   }
 
   if (amountEl) {
-    amountEl.textContent = fmtCurrency(goal.amount, goalCurrency);
+    amountEl.textContent = formatCurrency(goal.amount, goalCurrency);
   }
   if (noteEl) {
     noteEl.textContent = formatSavedAt(goal.created_at);
   }
   if (amountInput) {
-    amountInput.value = Number.isInteger(goal.amount) ? String(goal.amount) : String(goal.amount.toFixed(2));
+    amountInput.value = formatAmountValue(goal.amount);
   }
 }
 

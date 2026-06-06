@@ -1,4 +1,12 @@
-import { EVENTS, FX_CURRENCIES, api, dispatchAppEvent, getCurrency, showToast } from "./helper.js";
+import {
+  EVENTS,
+  FX_CURRENCIES,
+  api,
+  clampedAmountAfterDelta,
+  dispatchAppEvent,
+  getCurrency,
+  showToast,
+} from "./helper.js";
 
 let formInitialized = false;
 
@@ -10,7 +18,7 @@ export async function initFormComponent() {
   let currency = "";
   try {
     currency = await getCurrency();
-  } catch (e) {
+  } catch {
     /* treat as unset on failure */
   }
 
@@ -18,24 +26,21 @@ export async function initFormComponent() {
     setupEl.classList.remove("hidden");
     appEl.classList.add("hidden");
     document.querySelectorAll("[data-currency-choice]").forEach((btn) => {
-      btn.addEventListener(
-        "click",
-        async () => {
-          const chosen = btn.getAttribute("data-currency-choice");
-          try {
-            await api("/api/settings", {
-              method: "POST",
-              body: JSON.stringify({ currency: chosen }),
-            });
-            setupEl.classList.add("hidden");
-            appEl.classList.remove("hidden");
-            setupFormApp(chosen);
-            dispatchAppEvent(EVENTS.currencyChanged, { currency: chosen });
-          } catch (err) {
-            alert(err.message);
-          }
+      btn.addEventListener("click", async () => {
+        const chosen = btn.getAttribute("data-currency-choice");
+        try {
+          await api("/api/settings", {
+            method: "POST",
+            body: JSON.stringify({ currency: chosen }),
+          });
+          setupEl.classList.add("hidden");
+          appEl.classList.remove("hidden");
+          setupFormApp(chosen);
+          dispatchAppEvent(EVENTS.currencyChanged, { currency: chosen });
+        } catch (err) {
+          alert(err.message);
         }
-      );
+      });
     });
     return;
   }
@@ -86,11 +91,6 @@ function setupFormApp(currency) {
     amountQuickButtons.classList.toggle("hidden", activeCurrency !== "KRW" || !isVisible);
   }
 
-  function currentAmountValue() {
-    const amount = parseFloat(amountInput.value);
-    return Number.isFinite(amount) && amount > 0 ? amount : 0;
-  }
-
   document.addEventListener(EVENTS.currencyChanged, (e) => {
     activeCurrency = e.detail.currency || activeCurrency;
     renderBaseCurrency(activeCurrency);
@@ -115,8 +115,7 @@ function setupFormApp(currency) {
       });
       btn.addEventListener("click", () => {
         const delta = parseFloat(btn.getAttribute("data-amount-quick-delta"));
-        const nextAmount = Math.max(0, currentAmountValue() + delta);
-        amountInput.value = String(nextAmount);
+        amountInput.value = String(clampedAmountAfterDelta(amountInput.value, delta));
         amountInput.focus();
         setAmountQuickButtonsVisible(true);
       });
@@ -235,7 +234,9 @@ function initFxCalculator(currentCurrency) {
     fxApplyAmount = null;
     fxApplyBtn.disabled = true;
     fxApplyBtn.textContent =
-      Number.isFinite(amount) && amount > 0 ? "계산버튼을 눌러주세요" : "계산할 금액을 입력해주세요";
+      Number.isFinite(amount) && amount > 0
+        ? "계산버튼을 눌러주세요"
+        : "계산할 금액을 입력해주세요";
   }
 
   function setFxApplyButtonLoading() {
@@ -323,7 +324,7 @@ function initFxCalculator(currentCurrency) {
       setFxApplyButtonLoading();
       try {
         const data = await api(
-          `/api/exchange-rate?from=${encodeURIComponent(from)}&amount=${encodeURIComponent(amount)}`
+          `/api/exchange-rate?from=${encodeURIComponent(from)}&amount=${encodeURIComponent(amount)}`,
         );
         setFxApplyButtonResult(data.converted);
         setFxRateNoteResult(data);

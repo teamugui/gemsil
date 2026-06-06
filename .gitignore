@@ -15,6 +15,9 @@
 *.sqlite
 *.sqlite3
 
+# Node (dev-only tooling: Prettier/ESLint)
+/node_modules/
+
 # Env
 .env
 

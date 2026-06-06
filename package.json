@@ -1,0 +1,19 @@
+{
+  "name": "gemsil-frontend",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Dev-only formatting/linting for gemsil's static/js frontend (no build step; assets are served via Go embed).",
+  "scripts": {
+    "lint": "eslint static/js",
+    "format": "prettier --write static/js",
+    "format:check": "prettier --check static/js"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.4.1",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.6.0",
+    "prettier": "^3.8.3"
+  }
+}
