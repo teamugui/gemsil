@@ -361,6 +361,7 @@ async function initDashboardPage() {
     list.addEventListener("mousedown", handleDashboardListMouseDown);
     list.addEventListener("focusin", handleDashboardListFocusIn);
     list.addEventListener("focusout", handleDashboardListFocusOut);
+    list.addEventListener("change", handleDashboardListChange);
     list.addEventListener("submit", handleDashboardEditSubmit);
   }
 }
@@ -369,6 +370,24 @@ async function initDashboardPage() {
 function formatMonthLabel(ym) {
   const [y, m] = ym.split("-");
   return `${y}년 ${parseInt(m, 10)}월`;
+}
+
+// fmtCreatedAt renders an RFC3339 timestamp as "MM월 DD일 HH시" (local time).
+function fmtCreatedAt(s) {
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return escapeHtml(s || "");
+  const p = (n) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}일 ${p(d.getHours())}시`;
+}
+
+// fmtCreatedAtFull is the same timestamp down to the second, for the title tooltip.
+function fmtCreatedAtFull(s) {
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return escapeHtml(s || "");
+  const p = (n) => String(n).padStart(2, "0");
+  return `${p(d.getMonth() + 1)}월 ${p(d.getDate())}일 ${p(d.getHours())}시 ${p(
+    d.getMinutes()
+  )}분 ${p(d.getSeconds())}초`;
 }
 
 function selectedDashboardMonth() {
@@ -430,7 +449,9 @@ function renderItems(filter) {
           dashboardCurrency
         )} ÷ 12</div>`;
       }
-      const merchant = escapeHtml(it.merchant) || "(가맹점 없음)";
+      const merchant = it.merchant
+        ? `<div class="font-medium truncate">${escapeHtml(it.merchant)}</div>`
+        : `<div class="font-medium truncate text-gray-400">입력되지 않은 지출처</div>`;
       const desc = it.description
         ? `<div class="text-sm text-gray-500 truncate">${escapeHtml(it.description)}</div>`
         : "";
@@ -444,10 +465,10 @@ function renderItems(filter) {
                   ${badge}
                   <span class="text-xs text-gray-400">${typeLabel}</span>
                 </div>
-                <div class="font-medium truncate">${merchant}</div>
+                ${merchant}
                 ${desc}
-                <div class="flex items-center gap-1 text-xs text-gray-400">
-                  <span>${escapeHtml(it.date)}</span>
+                <div class="flex items-center gap-1 text-xs text-gray-400${it.description ? " mt-1" : ""}">
+                  <span title="${fmtCreatedAtFull(it.created_at)}">${fmtCreatedAt(it.created_at)}</span>
                   <button
                     type="button"
                     data-edit-expense="${it.id}"
@@ -564,7 +585,7 @@ function renderDashboardEditForm(it) {
       </div>
       <div>
         <label class="block text-sm font-medium mb-1">결제 유형</label>
-        <div class="grid grid-cols-3 gap-2">
+        <div class="grid grid-cols-3 gap-2" data-edit-payment-type-group="${it.id}">
           <label class="cursor-pointer">
             <input type="radio" name="edit-payment-type-${it.id}" value="once"${isChecked("once")} class="peer sr-only" />
             <span class="flex h-full items-center justify-center text-center text-sm font-semibold py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:border-indigo-600">
@@ -585,12 +606,7 @@ function renderDashboardEditForm(it) {
           </label>
         </div>
       </div>
-      <button
-        type="submit"
-        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg transition"
-      >
-        수정
-      </button>
+      ${renderDashboardActionRow(it)}
       <div class="grid grid-cols-2 gap-2">
         <button
           type="button"
@@ -608,6 +624,79 @@ function renderDashboardEditForm(it) {
         </button>
       </div>
     </form>`;
+}
+
+function renderDashboardActionRow(it) {
+  const fixedControls = renderDashboardFixedControls(it);
+  const submitButton = `
+    <button
+      type="submit"
+      class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg transition"
+    >
+      수정
+    </button>`;
+
+  if (!fixedControls) return submitButton;
+  const rowCols = it.payment_type === "once" ? "grid-cols-1" : "grid-cols-2";
+  return `
+    <div data-recurring-action-row="${it.id}" class="grid ${rowCols} gap-2">
+      ${fixedControls}
+      ${submitButton}
+    </div>`;
+}
+
+// renderDashboardFixedControls renders a single button for recurring (fixed)
+// expenses: "정기결제 종료" ends the expense at the current billing period;
+// once ended, the button flips to "재개" to undo.
+// Empty for one-time expenses, which do not recur.
+function renderDashboardFixedControls(it) {
+  if (it.category !== "fixed") return "";
+  const hidden = it.payment_type === "once" ? " hidden" : "";
+  if (it.end_month) {
+    return `
+      <button
+        type="button"
+        data-resume-recurring="${it.id}"
+        data-recurring-controls="${it.id}"
+        class="w-full border border-gray-300 text-gray-600 font-semibold py-2.5 rounded-lg hover:bg-gray-50 transition${hidden}"
+      >
+        정기결제 재개 (계속 청구)
+      </button>`;
+  }
+  return `
+    <button
+      type="button"
+      data-end-recurring="${it.id}"
+      data-recurring-controls="${it.id}"
+      class="w-full border border-amber-400 text-amber-700 font-semibold py-2.5 rounded-lg hover:bg-amber-50 transition${hidden}"
+    >
+      ${recurringEndButtonLabel(it.payment_type)}
+    </button>`;
+}
+
+function recurringEndButtonLabel(paymentType) {
+  if (paymentType === "annual") return "정기결제 종료 - 다음년도부터 중단";
+  return "정기결제 종료 - 다음달부터 중단";
+}
+
+function updateDashboardRecurringControls(form) {
+  const controls = form.querySelector("[data-recurring-controls]");
+  if (!controls) return;
+  const row = form.querySelector("[data-recurring-action-row]");
+
+  const id = form.getAttribute("data-edit-form");
+  const selected = form.querySelector(`input[name="edit-payment-type-${id}"]:checked`);
+  const paymentType = selected ? selected.value : "once";
+  const isOnce = paymentType === "once";
+  controls.classList.toggle("hidden", isOnce);
+  if (row) {
+    row.classList.toggle("grid-cols-2", !isOnce);
+    row.classList.toggle("grid-cols-1", isOnce);
+  }
+
+  if (controls.matches("[data-end-recurring]")) {
+    controls.textContent = recurringEndButtonLabel(paymentType);
+  }
 }
 
 function setDashboardEditAmountQuickVisible(form, isVisible) {
@@ -648,7 +737,20 @@ function handleDashboardListFocusOut(e) {
   }, 0);
 }
 
+function handleDashboardListChange(e) {
+  if (!e.target.matches("[data-edit-payment-type-group] input[type='radio']")) return;
+  const form = e.target.closest("[data-edit-form]");
+  if (form) updateDashboardRecurringControls(form);
+}
+
 function handleDashboardListClick(e) {
+  const paymentTypeInput = e.target.closest("[data-edit-payment-type-group] input[type='radio']");
+  if (paymentTypeInput) {
+    const form = paymentTypeInput.closest("[data-edit-form]");
+    if (form) updateDashboardRecurringControls(form);
+    return;
+  }
+
   const deltaBtn = e.target.closest("[data-edit-amount-delta]");
   if (deltaBtn) {
     const form = deltaBtn.closest("[data-edit-form]");
@@ -677,6 +779,18 @@ function handleDashboardListClick(e) {
   if (cancelBtn) {
     dashboardEditingID = null;
     renderItems(dashboardFilter);
+    return;
+  }
+
+  const endBtn = e.target.closest("[data-end-recurring]");
+  if (endBtn) {
+    endDashboardRecurring(parseInt(endBtn.getAttribute("data-end-recurring"), 10), false);
+    return;
+  }
+
+  const resumeBtn = e.target.closest("[data-resume-recurring]");
+  if (resumeBtn) {
+    endDashboardRecurring(parseInt(resumeBtn.getAttribute("data-resume-recurring"), 10), true);
     return;
   }
 
@@ -716,6 +830,40 @@ async function handleDashboardEditSubmit(e) {
   } catch (err) {
     showToast(err.message, true);
   }
+}
+
+// endDashboardRecurring ends a recurring expense at the currently viewed month
+// for monthly expenses, at the current year for annual expenses, or — when
+// resume is true — clears the end so it recurs again. The expense's other fields
+// are preserved.
+async function endDashboardRecurring(id, resume) {
+  const it = dashboardItems.find((x) => x.id === id);
+  if (!it) return;
+  const selectedMonth = selectedDashboardMonth();
+  const endMonth = it.payment_type === "annual" ? `${selectedMonth.slice(0, 4)}-12` : selectedMonth;
+
+  try {
+    await api(`/api/expenses/${id}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        amount: it.full_amount || it.amount, // annual shows/stores the yearly amount
+        merchant: it.merchant,
+        description: it.description,
+        payment_type: it.payment_type,
+        end_month: resume ? "" : endMonth,
+      }),
+    });
+    dashboardEditingID = null;
+    await loadDashboard(selectedDashboardMonth());
+    showToast(resume ? "정기결제를 재개했습니다." : recurringEndToast(it.payment_type));
+  } catch (err) {
+    showToast(err.message, true);
+  }
+}
+
+function recurringEndToast(paymentType) {
+  if (paymentType === "annual") return "올해까지만 청구되도록 종료했습니다.";
+  return "이 달까지만 청구되도록 종료했습니다.";
 }
 
 async function deleteDashboardExpense(id) {

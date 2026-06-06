@@ -48,10 +48,25 @@ var allowedTypes = map[string]bool{"once": true, "monthly": true, "annual": true
 
 func initDB() error {
 	var err error
-	db, err = sql.Open("sqlite", "gemsil.db")
+	db, err = openDB("gemsil.db")
+	return err
+}
+
+// openDB opens the SQLite database at dsn and ensures its schema is current.
+func openDB(dsn string) (*sql.DB, error) {
+	d, err := sql.Open("sqlite", dsn)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	if err := applySchema(d); err != nil {
+		return nil, err
+	}
+	return d, nil
+}
+
+// applySchema creates the tables if needed and migrates older databases that
+// predate the start_month/end_month columns. It is idempotent.
+func applySchema(d *sql.DB) error {
 	schema := `
 CREATE TABLE IF NOT EXISTS expenses (
 	id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -60,14 +75,34 @@ CREATE TABLE IF NOT EXISTS expenses (
 	description  TEXT,
 	payment_type TEXT NOT NULL,
 	date         TEXT NOT NULL,
-	created_at   TEXT NOT NULL
+	created_at   TEXT NOT NULL,
+	start_month  TEXT,
+	end_month    TEXT
 );
 CREATE TABLE IF NOT EXISTS settings (
 	key   TEXT PRIMARY KEY,
 	value TEXT NOT NULL
 );`
-	_, err = db.Exec(schema)
-	return err
+	if _, err := d.Exec(schema); err != nil {
+		return err
+	}
+	// For databases created before these columns existed, CREATE TABLE IF NOT
+	// EXISTS is a no-op, so add the columns explicitly. On fresh databases the
+	// columns already exist and ALTER fails with "duplicate column name" — ignore
+	// only that error.
+	for _, col := range []string{"start_month", "end_month"} {
+		if _, err := d.Exec("ALTER TABLE expenses ADD COLUMN " + col + " TEXT"); err != nil {
+			if !strings.Contains(err.Error(), "duplicate column name") {
+				return err
+			}
+		}
+	}
+	// Backfill the effective start month for rows that predate the column.
+	if _, err := d.Exec(`UPDATE expenses SET start_month = substr(date, 1, 7)
+		WHERE start_month IS NULL OR start_month = ''`); err != nil {
+		return err
+	}
+	return nil
 }
 
 // ---------------------------------------------------------------------------
@@ -82,6 +117,10 @@ type Expense struct {
 	PaymentType string  `json:"payment_type"`
 	Date        string  `json:"date"`
 	CreatedAt   string  `json:"created_at"`
+	// StartMonth/EndMonth bound a recurring expense's effective range ("YYYY-MM",
+	// end inclusive). EndMonth empty means "ongoing". Ignored for one-time expenses.
+	StartMonth string `json:"start_month,omitempty"`
+	EndMonth   string `json:"end_month,omitempty"`
 }
 
 // DashboardItem is one line in the current month's expense list.
@@ -94,6 +133,9 @@ type DashboardItem struct {
 	Amount      float64 `json:"amount"`                // amount counted toward this month
 	FullAmount  float64 `json:"full_amount,omitempty"` // for annual: the full yearly amount
 	Date        string  `json:"date"`
+	CreatedAt   string  `json:"created_at"`            // RFC3339; registration timestamp
+	StartMonth  string  `json:"start_month,omitempty"` // recurring effective start ("YYYY-MM")
+	EndMonth    string  `json:"end_month,omitempty"`   // recurring effective end, inclusive; empty = ongoing
 }
 
 // ---------------------------------------------------------------------------
@@ -129,6 +171,8 @@ func createExpense(w http.ResponseWriter, r *http.Request) {
 		Merchant    string  `json:"merchant"`
 		Description string  `json:"description"`
 		PaymentType string  `json:"payment_type"`
+		StartMonth  string  `json:"start_month"` // optional; recurring effective start
+		EndMonth    string  `json:"end_month"`   // optional; recurring effective end (inclusive)
 	}
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		httpError(w, http.StatusBadRequest, "잘못된 요청 형식입니다.")
@@ -147,11 +191,26 @@ func createExpense(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	date := now.Format("2006-01-02")
 	createdAt := now.Format(time.RFC3339)
+	currentMonth := now.Format("2006-01")
+
+	// One-time expenses are pinned to their own month; recurring ones may start in
+	// a chosen month (defaulting to the current one) and optionally end later.
+	startMonth, endMonth := currentMonth, ""
+	if in.PaymentType != "once" {
+		if in.StartMonth != "" {
+			startMonth = in.StartMonth
+		}
+		endMonth = in.EndMonth
+	}
+	if msg := validateMonthRange(in.PaymentType, startMonth, endMonth); msg != "" {
+		httpError(w, http.StatusBadRequest, msg)
+		return
+	}
 
 	res, err := db.Exec(
-		`INSERT INTO expenses (amount, merchant, description, payment_type, date, created_at)
-		 VALUES (?, ?, ?, ?, ?, ?)`,
-		in.Amount, in.Merchant, in.Description, in.PaymentType, date, createdAt,
+		`INSERT INTO expenses (amount, merchant, description, payment_type, date, created_at, start_month, end_month)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		in.Amount, in.Merchant, in.Description, in.PaymentType, date, createdAt, startMonth, nullableMonth(endMonth),
 	)
 	if err != nil {
 		httpError(w, http.StatusInternalServerError, "저장에 실패했습니다.")
@@ -161,11 +220,12 @@ func createExpense(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, Expense{
 		ID: id, Amount: in.Amount, Merchant: in.Merchant, Description: in.Description,
 		PaymentType: in.PaymentType, Date: date, CreatedAt: createdAt,
+		StartMonth: startMonth, EndMonth: endMonth,
 	})
 }
 
 func listExpenses(w http.ResponseWriter, r *http.Request) {
-	q := `SELECT id, amount, merchant, description, payment_type, date, created_at FROM expenses`
+	q := `SELECT id, amount, merchant, description, payment_type, date, created_at, start_month, end_month FROM expenses`
 	var args []any
 	if t := r.URL.Query().Get("type"); allowedTypes[t] {
 		q += " WHERE payment_type = ?"
@@ -183,10 +243,12 @@ func listExpenses(w http.ResponseWriter, r *http.Request) {
 	expenses := []Expense{}
 	for rows.Next() {
 		var e Expense
-		if err := rows.Scan(&e.ID, &e.Amount, &e.Merchant, &e.Description, &e.PaymentType, &e.Date, &e.CreatedAt); err != nil {
+		var start, end sql.NullString
+		if err := rows.Scan(&e.ID, &e.Amount, &e.Merchant, &e.Description, &e.PaymentType, &e.Date, &e.CreatedAt, &start, &end); err != nil {
 			httpError(w, http.StatusInternalServerError, "조회에 실패했습니다.")
 			return
 		}
+		e.StartMonth, e.EndMonth = start.String, end.String
 		expenses = append(expenses, e)
 	}
 	writeJSON(w, http.StatusOK, expenses)
@@ -209,6 +271,10 @@ func updateExpense(w http.ResponseWriter, r *http.Request) {
 		Merchant    string  `json:"merchant"`
 		Description string  `json:"description"`
 		PaymentType string  `json:"payment_type"`
+		// Pointers distinguish "absent" (keep existing) from an explicit value.
+		// EndMonth set to "" clears the end (makes the expense ongoing again).
+		StartMonth *string `json:"start_month"`
+		EndMonth   *string `json:"end_month"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		httpError(w, http.StatusBadRequest, "잘못된 요청 형식입니다.")
@@ -223,33 +289,81 @@ func updateExpense(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := db.Exec(
-		`UPDATE expenses
-		 SET amount = ?, merchant = ?, description = ?, payment_type = ?
-		 WHERE id = ?`,
-		in.Amount, in.Merchant, in.Description, in.PaymentType, id,
+	// Load the current effective range to use as the baseline for partial updates.
+	var (
+		curDate          string
+		curStart, curEnd sql.NullString
 	)
-	if err != nil {
-		httpError(w, http.StatusInternalServerError, "수정에 실패했습니다.")
-		return
-	}
-	if n, _ := res.RowsAffected(); n == 0 {
+	err := db.QueryRow(
+		`SELECT date, start_month, end_month FROM expenses WHERE id = ?`, id,
+	).Scan(&curDate, &curStart, &curEnd)
+	if errors.Is(err, sql.ErrNoRows) {
 		httpError(w, http.StatusNotFound, "지출 내역을 찾을 수 없습니다.")
 		return
 	}
-
-	var e Expense
-	err = db.QueryRow(
-		`SELECT id, amount, merchant, description, payment_type, date, created_at
-		 FROM expenses
-		 WHERE id = ?`,
-		id,
-	).Scan(&e.ID, &e.Amount, &e.Merchant, &e.Description, &e.PaymentType, &e.Date, &e.CreatedAt)
 	if err != nil {
 		httpError(w, http.StatusInternalServerError, "조회에 실패했습니다.")
 		return
 	}
+
+	startMonth, endMonth := resolveMonthRange(in.PaymentType, curDate, curStart.String, curEnd.String, in.StartMonth, in.EndMonth)
+	if msg := validateMonthRange(in.PaymentType, startMonth, endMonth); msg != "" {
+		httpError(w, http.StatusBadRequest, msg)
+		return
+	}
+
+	if _, err := db.Exec(
+		`UPDATE expenses
+		 SET amount = ?, merchant = ?, description = ?, payment_type = ?, start_month = ?, end_month = ?
+		 WHERE id = ?`,
+		in.Amount, in.Merchant, in.Description, in.PaymentType, startMonth, nullableMonth(endMonth), id,
+	); err != nil {
+		httpError(w, http.StatusInternalServerError, "수정에 실패했습니다.")
+		return
+	}
+
+	var e Expense
+	var start, end sql.NullString
+	err = db.QueryRow(
+		`SELECT id, amount, merchant, description, payment_type, date, created_at, start_month, end_month
+		 FROM expenses
+		 WHERE id = ?`,
+		id,
+	).Scan(&e.ID, &e.Amount, &e.Merchant, &e.Description, &e.PaymentType, &e.Date, &e.CreatedAt, &start, &end)
+	if err != nil {
+		httpError(w, http.StatusInternalServerError, "조회에 실패했습니다.")
+		return
+	}
+	e.StartMonth, e.EndMonth = start.String, end.String
 	writeJSON(w, http.StatusOK, e)
+}
+
+// resolveMonthRange computes the effective start/end months for an update. One-time
+// expenses are always pinned to their own month with no end. For recurring ones,
+// nil inputs keep the current value (falling back to the registration month when
+// unset); a non-nil pointer overrides, and EndMonth="" clears the end.
+func resolveMonthRange(ptype, date, curStart, curEnd string, startIn, endIn *string) (start, end string) {
+	monthOf := func(d string) string {
+		if len(d) >= 7 {
+			return d[:7]
+		}
+		return d
+	}
+	if ptype == "once" {
+		return monthOf(date), ""
+	}
+	start = curStart
+	if start == "" {
+		start = monthOf(date)
+	}
+	if startIn != nil {
+		start = *startIn
+	}
+	end = curEnd
+	if endIn != nil {
+		end = *endIn
+	}
+	return start, end
 }
 
 func deleteExpense(w http.ResponseWriter, r *http.Request) {
@@ -287,12 +401,15 @@ func dashboardSummary(w http.ResponseWriter, r *http.Request) {
 		ym = m
 	}
 
+	// Recurring expenses count only within their effective range [start_month,
+	// end_month] (end inclusive; NULL = ongoing). One-time rows also satisfy this
+	// window and are narrowed to their exact month below.
 	rows, err := db.Query(
-		`SELECT id, amount, merchant, description, payment_type, date
+		`SELECT id, amount, merchant, description, payment_type, date, created_at, start_month, end_month
 		 FROM expenses
-		 WHERE substr(date, 1, 7) <= ?
+		 WHERE start_month <= ? AND (end_month IS NULL OR ? <= end_month)
 		 ORDER BY date DESC, id DESC`,
-		ym,
+		ym, ym,
 	)
 	if err != nil {
 		httpError(w, http.StatusInternalServerError, "조회에 실패했습니다.")
@@ -310,8 +427,10 @@ func dashboardSummary(w http.ResponseWriter, r *http.Request) {
 			description string
 			ptype       string
 			date        string
+			createdAt   string
+			start, end  sql.NullString
 		)
-		if err := rows.Scan(&id, &amount, &merchant, &description, &ptype, &date); err != nil {
+		if err := rows.Scan(&id, &amount, &merchant, &description, &ptype, &date, &createdAt, &start, &end); err != nil {
 			httpError(w, http.StatusInternalServerError, "조회에 실패했습니다.")
 			return
 		}
@@ -324,6 +443,7 @@ func dashboardSummary(w http.ResponseWriter, r *http.Request) {
 				items = append(items, DashboardItem{
 					ID: id, Category: "variable", PaymentType: ptype,
 					Merchant: merchant, Description: description, Amount: amount, Date: date,
+					CreatedAt: createdAt,
 				})
 			}
 		case "monthly":
@@ -331,6 +451,7 @@ func dashboardSummary(w http.ResponseWriter, r *http.Request) {
 			items = append(items, DashboardItem{
 				ID: id, Category: "fixed", PaymentType: ptype,
 				Merchant: merchant, Description: description, Amount: amount, Date: date,
+				CreatedAt: createdAt, StartMonth: start.String, EndMonth: end.String,
 			})
 		case "annual":
 			prorated := amount / 12
@@ -338,6 +459,7 @@ func dashboardSummary(w http.ResponseWriter, r *http.Request) {
 			items = append(items, DashboardItem{
 				ID: id, Category: "fixed", PaymentType: ptype,
 				Merchant: merchant, Description: description, Amount: prorated, FullAmount: amount, Date: date,
+				CreatedAt: createdAt, StartMonth: start.String, EndMonth: end.String,
 			})
 		}
 	}
@@ -357,6 +479,34 @@ func dashboardSummary(w http.ResponseWriter, r *http.Request) {
 func validYearMonth(s string) bool {
 	_, err := time.Parse("2006-01", s)
 	return err == nil
+}
+
+// validateMonthRange checks a recurring expense's effective range. start must be
+// a valid "YYYY-MM"; end may be empty ("ongoing") or a valid month not earlier
+// than start. One-time expenses have no end. Returns a Korean error message when
+// invalid, or "" when valid. (Lexicographic compare is correct for "YYYY-MM".)
+func validateMonthRange(ptype, start, end string) string {
+	if !validYearMonth(start) {
+		return "시작 월 형식이 올바르지 않습니다."
+	}
+	if ptype == "once" || end == "" {
+		return ""
+	}
+	if !validYearMonth(end) {
+		return "종료 월 형식이 올바르지 않습니다."
+	}
+	if end < start {
+		return "종료 월은 시작 월보다 빠를 수 없습니다."
+	}
+	return ""
+}
+
+// nullableMonth maps an empty month string to a SQL NULL, else the month itself.
+func nullableMonth(m string) any {
+	if m == "" {
+		return nil
+	}
+	return m
 }
 
 // availableMonths lists every "YYYY-MM" period the dashboard can show — from the

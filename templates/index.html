@@ -49,7 +49,7 @@
       <form id="expense-form" class="bg-white rounded-2xl shadow-sm p-5 space-y-4">
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-sm font-medium mb-1">
+            <label for="amount" class="block text-sm font-medium mb-1">
               지출액 (<span data-base-currency>KRW</span>)
             </label>
             <input
@@ -59,16 +59,16 @@
               min="0"
               inputmode="decimal"
               required
-              placeholder="얼마를 썼습니까"
+              placeholder="예시 : 15000"
               class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
             />
           </div>
           <div>
-            <label class="block text-sm font-medium mb-1">지출처</label>
+            <label for="merchant" class="block text-sm font-medium mb-1">지출처</label>
             <input
               id="merchant"
               type="text"
-              placeholder="어디에 썼습니까"
+              placeholder="예시 : 카페"
               class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
             />
           </div>
@@ -128,11 +128,12 @@
             <span id="optional-toggle-icon">▶</span>
             <span>지출 내용</span>
           </button>
-          <div id="optional-fields" class="hidden mt-3">
+          <div id="optional-fields" class="hidden mt-1">
+            <label for="description" class="sr-only">지출 설명</label>
             <input
               id="description"
               type="text"
-              placeholder="설명을 해주세요"
+              placeholder="예시 : 친구와 점심에 커피"
               class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
             />
           </div>
@@ -193,7 +194,7 @@
               type="number"
               step="any"
               min="0"
-              placeholder="외화 금액"
+              placeholder="예시 : 49.99"
               class="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
             />
             <select
