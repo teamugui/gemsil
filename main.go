@@ -82,6 +82,12 @@ CREATE TABLE IF NOT EXISTS expenses (
 CREATE TABLE IF NOT EXISTS settings (
 	key   TEXT PRIMARY KEY,
 	value TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS expense_goals (
+	id         INTEGER PRIMARY KEY AUTOINCREMENT,
+	month      TEXT NOT NULL,
+	amount     REAL NOT NULL CHECK(amount > 0),
+	created_at TEXT NOT NULL
 );`
 	if _, err := d.Exec(schema); err != nil {
 		return err
@@ -136,6 +142,15 @@ type DashboardItem struct {
 	CreatedAt   string  `json:"created_at"`            // RFC3339; registration timestamp
 	StartMonth  string  `json:"start_month,omitempty"` // recurring effective start ("YYYY-MM")
 	EndMonth    string  `json:"end_month,omitempty"`   // recurring effective end, inclusive; empty = ongoing
+}
+
+// ExpenseGoal is a monthly target snapshot. Edits are append-only: the newest
+// snapshot for a month is treated as the active target.
+type ExpenseGoal struct {
+	ID        int64   `json:"id"`
+	Month     string  `json:"month"`
+	Amount    float64 `json:"amount"`
+	CreatedAt string  `json:"created_at"`
 }
 
 // ---------------------------------------------------------------------------
@@ -385,6 +400,132 @@ func deleteExpense(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+// ---------------------------------------------------------------------------
+// Expense goal handlers
+// ---------------------------------------------------------------------------
+
+func latestExpenseGoal(month string) (*ExpenseGoal, error) {
+	var g ExpenseGoal
+	err := db.QueryRow(
+		`SELECT id, month, amount, created_at
+		 FROM expense_goals
+		 WHERE month = ?
+		 ORDER BY id DESC
+		 LIMIT 1`,
+		month,
+	).Scan(&g.ID, &g.Month, &g.Amount, &g.CreatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &g, nil
+}
+
+func listExpenseGoalHistory(month string) ([]ExpenseGoal, error) {
+	rows, err := db.Query(
+		`SELECT id, month, amount, created_at
+		 FROM expense_goals
+		 WHERE month = ?
+		 ORDER BY id DESC`,
+		month,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	goals := []ExpenseGoal{}
+	for rows.Next() {
+		var g ExpenseGoal
+		if err := rows.Scan(&g.ID, &g.Month, &g.Amount, &g.CreatedAt); err != nil {
+			return nil, err
+		}
+		goals = append(goals, g)
+	}
+	return goals, rows.Err()
+}
+
+func requestMonthOrCurrent(r *http.Request) (string, string) {
+	month := r.URL.Query().Get("month")
+	if month == "" {
+		return time.Now().Format("2006-01"), ""
+	}
+	if !validYearMonth(month) {
+		return "", "월 형식이 올바르지 않습니다."
+	}
+	return month, ""
+}
+
+func getExpenseGoal(w http.ResponseWriter, r *http.Request) {
+	month, msg := requestMonthOrCurrent(r)
+	if msg != "" {
+		httpError(w, http.StatusBadRequest, msg)
+		return
+	}
+
+	goal, err := latestExpenseGoal(month)
+	if err != nil {
+		httpError(w, http.StatusInternalServerError, "조회에 실패했습니다.")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"month": month,
+		"goal":  goal,
+	})
+}
+
+func createExpenseGoal(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Amount float64 `json:"amount"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		httpError(w, http.StatusBadRequest, "잘못된 요청 형식입니다.")
+		return
+	}
+	if in.Amount <= 0 {
+		httpError(w, http.StatusBadRequest, "목표 금액은 0보다 커야 합니다.")
+		return
+	}
+
+	now := time.Now()
+	goal := ExpenseGoal{
+		Month:     now.Format("2006-01"),
+		Amount:    in.Amount,
+		CreatedAt: now.Format(time.RFC3339),
+	}
+	res, err := db.Exec(
+		`INSERT INTO expense_goals (month, amount, created_at)
+		 VALUES (?, ?, ?)`,
+		goal.Month, goal.Amount, goal.CreatedAt,
+	)
+	if err != nil {
+		httpError(w, http.StatusInternalServerError, "저장에 실패했습니다.")
+		return
+	}
+	goal.ID, _ = res.LastInsertId()
+	writeJSON(w, http.StatusCreated, goal)
+}
+
+func listExpenseGoalHistoryHandler(w http.ResponseWriter, r *http.Request) {
+	month, msg := requestMonthOrCurrent(r)
+	if msg != "" {
+		httpError(w, http.StatusBadRequest, msg)
+		return
+	}
+
+	goals, err := listExpenseGoalHistory(month)
+	if err != nil {
+		httpError(w, http.StatusInternalServerError, "조회에 실패했습니다.")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"month":   month,
+		"history": goals,
+	})
+}
+
 // dashboardSummary computes the current month's totals using a virtual/computed
 // model: recurring expenses are stored once and their monthly contribution is
 // derived here. A recurring expense counts for every month from its start month
@@ -464,14 +605,35 @@ func dashboardSummary(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	total := fixed + variable
+	var (
+		goalAmount    any
+		goalCreatedAt any
+		remaining     any
+		usageRate     any
+	)
+	if goal, err := latestExpenseGoal(ym); err == nil && goal != nil {
+		goalAmount = goal.Amount
+		goalCreatedAt = goal.CreatedAt
+		remaining = goal.Amount - total
+		usageRate = total / goal.Amount
+	} else if err != nil {
+		httpError(w, http.StatusInternalServerError, "조회에 실패했습니다.")
+		return
+	}
+
 	writeJSON(w, http.StatusOK, map[string]any{
-		"currency": currency,
-		"month":    ym,
-		"months":   availableMonths(currentYM),
-		"fixed":    fixed,
-		"variable": variable,
-		"total":    fixed + variable,
-		"items":    items,
+		"currency":         currency,
+		"month":            ym,
+		"months":           availableMonths(currentYM),
+		"fixed":            fixed,
+		"variable":         variable,
+		"total":            total,
+		"goal_amount":      goalAmount,
+		"goal_created_at":  goalCreatedAt,
+		"remaining_amount": remaining,
+		"goal_usage_rate":  usageRate,
+		"items":            items,
 	})
 }
 
@@ -728,6 +890,9 @@ func main() {
 		r.Get("/expenses", listExpenses)
 		r.Put("/expenses/{id}", updateExpense)
 		r.Delete("/expenses/{id}", deleteExpense)
+		r.Get("/expense-goals", getExpenseGoal)
+		r.Post("/expense-goals", createExpenseGoal)
+		r.Get("/expense-goals/history", listExpenseGoalHistoryHandler)
 		r.Get("/dashboard", dashboardSummary)
 		r.Get("/settings", getSettings)
 		r.Post("/settings", saveSettings)

@@ -64,7 +64,9 @@ function setupFormApp(currency) {
 
   function setOptionalFieldsOpen(isOpen) {
     if (!optionalToggle || !optionalFields || !optionalToggleIcon) return;
-    optionalFields.classList.toggle("hidden", !isOpen);
+    optionalFields.style.maxHeight = isOpen ? `${optionalFields.scrollHeight}px` : "0";
+    optionalFields.style.opacity = isOpen ? "1" : "0";
+    optionalFields.style.marginTop = isOpen ? "0.25rem" : "0";
     optionalToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
     optionalToggleIcon.textContent = isOpen ? "▼" : "▶";
   }
@@ -193,12 +195,34 @@ function renderFxCurrencyOptions(currency) {
 
 function initFxCalculator(currentCurrency) {
   const fxToggle = document.getElementById("fx-toggle");
+  const fxPanel = document.getElementById("fx-panel");
+  const fxToggleIcon = document.getElementById("fx-toggle-icon");
   const fxAmountInput = document.getElementById("fx-amount");
   const fxSelect = document.getElementById("fx-currency");
   const fxFromCurrency = document.getElementById("fx-from-currency");
   const fxBtn = document.getElementById("fx-calc-btn");
   const fxApplyBtn = document.getElementById("fx-apply-btn");
+  const fxRateNote = document.getElementById("fx-rate-note");
   let fxApplyAmount = null;
+
+  function formatRateValue(rate) {
+    if (!Number.isFinite(rate)) return "";
+    return new Intl.NumberFormat("ko-KR", {
+      useGrouping: false,
+      maximumFractionDigits: rate >= 100 ? 0 : 4,
+    }).format(rate);
+  }
+
+  function refreshFxPanelHeight() {
+    if (!fxToggle || !fxPanel || fxToggle.getAttribute("aria-expanded") !== "true") return;
+    fxPanel.style.maxHeight = `${fxPanel.scrollHeight}px`;
+  }
+
+  function resetFxRateNote() {
+    if (!fxRateNote) return;
+    fxRateNote.textContent = "환율은 참고용입니다. 변환된 금액을 확인 후 입력하세요.";
+    refreshFxPanelHeight();
+  }
 
   function renderFxCurrencyLabel() {
     if (!fxFromCurrency || !fxSelect) return;
@@ -236,20 +260,46 @@ function initFxCalculator(currentCurrency) {
     fxApplyBtn.textContent = `${fxApplyAmount.toLocaleString()} ${currency}를 지출액에 적용`;
   }
 
-  if (fxToggle) {
+  function setFxRateNoteResult(data) {
+    if (!fxRateNote) return;
+    const from = data.from || (fxSelect && fxSelect.value) || "";
+    const to = data.to || currentCurrency();
+    const rate = formatRateValue(Number(data.rate));
+    if (!from || !to || !rate) {
+      resetFxRateNote();
+      return;
+    }
+    fxRateNote.textContent = `환율(1${from}=${rate}${to})는 참고용입니다. 변환된 금액을 확인 후 입력하세요`;
+    refreshFxPanelHeight();
+  }
+
+  function setFxPanelOpen(isOpen) {
+    if (!fxToggle || !fxPanel || !fxToggleIcon) return;
+    fxPanel.style.maxHeight = isOpen ? `${fxPanel.scrollHeight}px` : "0";
+    fxPanel.style.opacity = isOpen ? "1" : "0";
+    fxPanel.style.marginTop = isOpen ? "1rem" : "0";
+    fxToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    fxToggleIcon.textContent = isOpen ? "▼" : "▶";
+  }
+
+  if (fxToggle && fxPanel) {
     fxToggle.addEventListener("click", () => {
-      document.getElementById("fx-panel").classList.toggle("hidden");
+      setFxPanelOpen(fxToggle.getAttribute("aria-expanded") !== "true");
     });
   }
 
   if (fxAmountInput) {
-    fxAmountInput.addEventListener("input", resetFxApplyButton);
+    fxAmountInput.addEventListener("input", () => {
+      resetFxApplyButton();
+      resetFxRateNote();
+    });
   }
 
   if (fxSelect) {
     fxSelect.addEventListener("change", () => {
       renderFxCurrencyLabel();
       resetFxApplyButton();
+      resetFxRateNote();
     });
   }
 
@@ -276,12 +326,15 @@ function initFxCalculator(currentCurrency) {
           `/api/exchange-rate?from=${encodeURIComponent(from)}&amount=${encodeURIComponent(amount)}`
         );
         setFxApplyButtonResult(data.converted);
+        setFxRateNoteResult(data);
       } catch (err) {
         setFxApplyButtonError(err.message);
+        resetFxRateNote();
       }
     });
   }
 
   resetFxApplyButton();
+  resetFxRateNote();
   return resetFxApplyButton;
 }

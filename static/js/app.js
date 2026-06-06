@@ -1,5 +1,6 @@
 import { initDashboardComponent } from "./dashboard-component.js";
 import { initFormComponent } from "./form-component.js";
+import { initGoalComponent } from "./goal-component.js";
 
 function initMobileTabs() {
   const tabInput = document.getElementById("tab-input");
@@ -49,3 +50,4 @@ function initMobileTabs() {
 initMobileTabs();
 initDashboardComponent();
 initFormComponent();
+initGoalComponent();

@@ -12,6 +12,7 @@ export async function initDashboardComponent() {
 
   document.addEventListener(EVENTS.currencyChanged, () => loadDashboard(selectedDashboardMonth()));
   document.addEventListener(EVENTS.expenseChanged, () => loadDashboard(selectedDashboardMonth()));
+  document.addEventListener(EVENTS.goalChanged, () => loadDashboard(selectedDashboardMonth()));
 
   await loadDashboard();
 
@@ -86,12 +87,34 @@ async function loadDashboard(month) {
     document.getElementById("fixed-amount").textContent = fmtCurrency(data.fixed, dashboardCurrency);
     document.getElementById("variable-amount").textContent = fmtCurrency(data.variable, dashboardCurrency);
     document.getElementById("total-amount").textContent = fmtCurrency(data.total, dashboardCurrency);
+    renderGoalSummary(data);
     renderItems(dashboardFilter);
   } catch (e) {
     if (list) {
       list.innerHTML = `<p class="text-red-500 p-4 text-center">${escapeHtml(e.message)}</p>`;
     }
   }
+}
+
+function renderGoalSummary(data) {
+  const goalEl = document.getElementById("goal-summary");
+  if (!goalEl) return;
+
+  if (data.goal_amount === null || data.goal_amount === undefined) {
+    goalEl.textContent = "목표 미설정";
+    goalEl.className = "basis-full text-center text-xs font-medium text-gray-400";
+    return;
+  }
+
+  const remaining = Number(data.remaining_amount);
+  const usageRate = Number(data.goal_usage_rate);
+  const usageText = Number.isFinite(usageRate) ? `${Math.round(usageRate * 100)}%` : "-";
+  goalEl.textContent = `목표 ${fmtCurrency(data.goal_amount, dashboardCurrency)} · 잔여 ${fmtCurrency(
+    remaining,
+    dashboardCurrency
+  )} · 사용률 ${usageText}`;
+  goalEl.className =
+    "basis-full text-center text-xs font-medium " + (remaining >= 0 ? "text-teal-600" : "text-red-500");
 }
 
 function renderItems(filter) {

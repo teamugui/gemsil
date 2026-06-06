@@ -19,6 +19,7 @@ export const FX_CURRENCIES = [
 export const EVENTS = {
   currencyChanged: "gemsil:currency-changed",
   expenseChanged: "gemsil:expense-changed",
+  goalChanged: "gemsil:goal-changed",
 };
 
 export function fmtCurrency(n, currency) {

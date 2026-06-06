@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -98,6 +99,18 @@ func TestMigrationAddsColumnsAndBackfills(t *testing.T) {
 	}
 }
 
+func TestSchemaCreatesExpenseGoals(t *testing.T) {
+	setupTestDB(t)
+
+	var name string
+	if err := db.QueryRow(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'expense_goals'`).Scan(&name); err != nil {
+		t.Fatalf("expense_goals table: %v", err)
+	}
+	if name != "expense_goals" {
+		t.Fatalf("table name = %q, want expense_goals", name)
+	}
+}
+
 func TestDashboardOngoingMonthlyCarriesForward(t *testing.T) {
 	setupTestDB(t)
 	insertRecurring(t, 100, "monthly", "2026-01", "")
@@ -159,6 +172,70 @@ func TestDashboardAmountChangeNoOverlap(t *testing.T) {
 	}
 }
 
+func TestDashboardIncludesGoalProgress(t *testing.T) {
+	setupTestDB(t)
+	insertRecurring(t, 100, "monthly", "2026-01", "")
+	if _, err := db.Exec(
+		`INSERT INTO expense_goals (month, amount, created_at) VALUES (?, ?, ?)`,
+		"2026-01", 250.0, "2026-01-02T00:00:00Z",
+	); err != nil {
+		t.Fatalf("insert goal: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/dashboard?month=2026-01", nil)
+	rec := httptest.NewRecorder()
+	dashboardSummary(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("dashboard status %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var out struct {
+		GoalAmount    *float64 `json:"goal_amount"`
+		Remaining     *float64 `json:"remaining_amount"`
+		GoalUsageRate *float64 `json:"goal_usage_rate"`
+		GoalCreatedAt *string  `json:"goal_created_at"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if out.GoalAmount == nil || *out.GoalAmount != 250 {
+		t.Fatalf("goal_amount = %v, want 250", out.GoalAmount)
+	}
+	if out.Remaining == nil || *out.Remaining != 150 {
+		t.Fatalf("remaining_amount = %v, want 150", out.Remaining)
+	}
+	if out.GoalUsageRate == nil || *out.GoalUsageRate != 0.4 {
+		t.Fatalf("goal_usage_rate = %v, want 0.4", out.GoalUsageRate)
+	}
+	if out.GoalCreatedAt == nil || *out.GoalCreatedAt != "2026-01-02T00:00:00Z" {
+		t.Fatalf("goal_created_at = %v, want timestamp", out.GoalCreatedAt)
+	}
+}
+
+func TestDashboardGoalFieldsNullWhenUnset(t *testing.T) {
+	setupTestDB(t)
+	req := httptest.NewRequest(http.MethodGet, "/api/dashboard?month=2026-01", nil)
+	rec := httptest.NewRecorder()
+	dashboardSummary(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("dashboard status %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var out struct {
+		GoalAmount *float64 `json:"goal_amount"`
+		Remaining  *float64 `json:"remaining_amount"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if out.GoalAmount != nil {
+		t.Fatalf("goal_amount = %v, want nil", *out.GoalAmount)
+	}
+	if out.Remaining != nil {
+		t.Fatalf("remaining_amount = %v, want nil", *out.Remaining)
+	}
+}
+
 // --- handler tests -------------------------------------------------------
 
 func postExpense(t *testing.T, body string) *httptest.ResponseRecorder {
@@ -180,9 +257,67 @@ func putExpense(t *testing.T, id int64, body string) *httptest.ResponseRecorder 
 	return rec
 }
 
+func postExpenseGoal(t *testing.T, body string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, "/api/expense-goals", bytes.NewBufferString(body))
+	rec := httptest.NewRecorder()
+	createExpenseGoal(rec, req)
+	return rec
+}
+
+func getExpenseGoalForMonth(t *testing.T, month string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, "/api/expense-goals?month="+month, nil)
+	rec := httptest.NewRecorder()
+	getExpenseGoal(rec, req)
+	return rec
+}
+
 func TestCreateRejectsEndBeforeStart(t *testing.T) {
 	setupTestDB(t)
 	rec := postExpense(t, `{"amount":100,"payment_type":"monthly","start_month":"2026-05","end_month":"2026-03"}`)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400; body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestExpenseGoalSnapshotsLatest(t *testing.T) {
+	setupTestDB(t)
+	currentMonth := time.Now().Format("2006-01")
+
+	if rec := postExpenseGoal(t, `{"amount":100}`); rec.Code != http.StatusCreated {
+		t.Fatalf("first goal status = %d: %s", rec.Code, rec.Body.String())
+	}
+	if rec := postExpenseGoal(t, `{"amount":150}`); rec.Code != http.StatusCreated {
+		t.Fatalf("second goal status = %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var count int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM expense_goals WHERE month = ?`, currentMonth).Scan(&count); err != nil {
+		t.Fatalf("count goals: %v", err)
+	}
+	if count != 2 {
+		t.Fatalf("goal row count = %d, want 2", count)
+	}
+
+	rec := getExpenseGoalForMonth(t, currentMonth)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("get goal status = %d: %s", rec.Code, rec.Body.String())
+	}
+	var out struct {
+		Goal *ExpenseGoal `json:"goal"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if out.Goal == nil || out.Goal.Amount != 150 {
+		t.Fatalf("latest goal = %+v, want amount 150", out.Goal)
+	}
+}
+
+func TestCreateExpenseGoalRejectsNonPositiveAmount(t *testing.T) {
+	setupTestDB(t)
+	rec := postExpenseGoal(t, `{"amount":0}`)
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400; body=%s", rec.Code, rec.Body.String())
 	}
