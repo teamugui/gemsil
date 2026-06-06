@@ -78,7 +78,7 @@ export function showToast(msg, isError = false) {
   t.textContent = msg;
   t.className =
     "fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg shadow-lg text-white z-50 " +
-    (isError ? "bg-red-500" : "bg-green-600");
+    (isError ? "bg-red-500" : "bg-teal-600");
   setTimeout(() => {
     t.className = "hidden";
   }, 2500);

@@ -23,9 +23,9 @@ export async function initDashboardComponent() {
   document.querySelectorAll("[data-filter]").forEach((btn) => {
     btn.addEventListener("click", () => {
       document.querySelectorAll("[data-filter]").forEach((b) => {
-        b.classList.remove("bg-indigo-600", "text-white");
+        b.classList.remove("bg-teal-600", "text-white");
       });
-      btn.classList.add("bg-indigo-600", "text-white");
+      btn.classList.add("bg-teal-600", "text-white");
       dashboardFilter = btn.getAttribute("data-filter");
       renderItems(dashboardFilter);
     });
@@ -126,7 +126,7 @@ function renderItems(filter) {
       const desc = it.description ? `<div class="text-sm text-gray-500 truncate">${escapeHtml(it.description)}</div>` : "";
       const editForm = it.id === dashboardEditingID ? renderDashboardEditForm(it) : "";
       return `
-        <div>
+        <div data-component-id="expense.dashboard.item" data-expense-id="${it.id}">
           <div class="bg-white rounded-2xl shadow-sm p-5">
             <div class="flex items-center justify-between">
               <div class="min-w-0">
@@ -141,7 +141,7 @@ function renderItems(filter) {
                   <button
                     type="button"
                     data-edit-expense="${it.id}"
-                    class="rounded px-1 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
+                    class="rounded px-1 text-gray-400 hover:bg-gray-100 hover:text-teal-600"
                     aria-label="지출 내역 수정"
                     title="수정"
                   >
@@ -165,17 +165,17 @@ function renderDashboardEditForm(it) {
   const amountQuickButtons =
     dashboardCurrency === "KRW"
       ? `
-        <div data-edit-amount-quick-buttons="${it.id}" class="hidden col-span-2 grid grid-cols-3 gap-1.5 sm:grid-cols-6">
-          <button type="button" data-edit-amount-delta="1000" class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700">+1,000</button>
-          <button type="button" data-edit-amount-delta="10000" class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700">+10,000</button>
-          <button type="button" data-edit-amount-delta="50000" class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700">+50,000</button>
+        <div data-component-id="expense.dashboard.edit-amount-quick-buttons" data-edit-amount-quick-buttons="${it.id}" class="hidden col-span-2 grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+          <button type="button" data-edit-amount-delta="1000" class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:border-teal-300 hover:bg-teal-50 hover:text-teal-700">+1,000</button>
+          <button type="button" data-edit-amount-delta="10000" class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:border-teal-300 hover:bg-teal-50 hover:text-teal-700">+10,000</button>
+          <button type="button" data-edit-amount-delta="50000" class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:border-teal-300 hover:bg-teal-50 hover:text-teal-700">+50,000</button>
           <button type="button" data-edit-amount-delta="-1000" class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">-1,000</button>
           <button type="button" data-edit-amount-delta="-10000" class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">-10,000</button>
           <button type="button" data-edit-amount-delta="-50000" class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">-50,000</button>
         </div>`
       : "";
   return `
-    <form data-edit-form="${it.id}" class="mt-2 bg-gray-50 border border-gray-200 rounded-2xl p-5 space-y-4">
+    <form data-component-id="expense.dashboard.edit-form" data-edit-form="${it.id}" class="mt-2 bg-gray-50 border border-gray-200 rounded-2xl p-5 space-y-4">
       <div class="grid grid-cols-2 gap-3">
         <div>
           <label class="block text-sm font-medium mb-1">
@@ -191,7 +191,7 @@ function renderDashboardEditForm(it) {
             value="${escapeHtml(amountValue)}"
             placeholder="얼마를 썼습니까"
             data-edit-amount-input="${it.id}"
-            class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"
           />
         </div>
         <div>
@@ -201,7 +201,7 @@ function renderDashboardEditForm(it) {
             type="text"
             value="${escapeHtml(it.merchant)}"
             placeholder="어디에 썼습니까"
-            class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"
           />
         </div>
         ${amountQuickButtons}
@@ -213,27 +213,27 @@ function renderDashboardEditForm(it) {
           type="text"
           value="${escapeHtml(it.description)}"
           placeholder="설명을 해주세요"
-          class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"
         />
       </div>
       <div>
         <label class="block text-sm font-medium mb-1">결제 유형</label>
-        <div class="grid grid-cols-3 gap-2" data-edit-payment-type-group="${it.id}">
+        <div data-component-id="expense.dashboard.edit-payment-type" class="grid grid-cols-3 gap-2" data-edit-payment-type-group="${it.id}">
           <label class="cursor-pointer">
             <input type="radio" name="edit-payment-type-${it.id}" value="once"${isChecked("once")} class="peer sr-only" />
-            <span class="flex h-full items-center justify-center text-center text-sm font-semibold py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:border-indigo-600">
+            <span class="flex h-full items-center justify-center text-center text-sm font-semibold py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-teal-600 peer-checked:text-white peer-checked:border-teal-600">
               일회성
             </span>
           </label>
           <label class="cursor-pointer">
             <input type="radio" name="edit-payment-type-${it.id}" value="monthly"${isChecked("monthly")} class="peer sr-only" />
-            <span class="flex h-full items-center justify-center text-center text-sm font-semibold py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:border-indigo-600">
+            <span class="flex h-full items-center justify-center text-center text-sm font-semibold py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-teal-600 peer-checked:text-white peer-checked:border-teal-600">
               월간
             </span>
           </label>
           <label class="cursor-pointer">
             <input type="radio" name="edit-payment-type-${it.id}" value="annual"${isChecked("annual")} class="peer sr-only" />
-            <span class="flex h-full items-center justify-center text-center text-sm font-semibold py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:border-indigo-600">
+            <span class="flex h-full items-center justify-center text-center text-sm font-semibold py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-teal-600 peer-checked:text-white peer-checked:border-teal-600">
               연간
             </span>
           </label>
@@ -264,7 +264,7 @@ function renderDashboardActionRow(it) {
   const submitButton = `
     <button
       type="submit"
-      class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg transition"
+      class="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 rounded-lg transition"
     >
       수정
     </button>`;
@@ -272,7 +272,7 @@ function renderDashboardActionRow(it) {
   if (!fixedControls) return submitButton;
   const rowCols = it.payment_type === "once" ? "grid-cols-1" : "grid-cols-2";
   return `
-    <div data-recurring-action-row="${it.id}" class="grid ${rowCols} gap-2">
+    <div data-component-id="expense.dashboard.recurring-action-row" data-recurring-action-row="${it.id}" class="grid ${rowCols} gap-2">
       ${fixedControls}
       ${submitButton}
     </div>`;

@@ -17,10 +17,10 @@ function initMobileTabs() {
       tabDashboard.classList.add("hidden", "lg:block");
 
       if (navInput && navDashboard) {
-        navInput.classList.add("text-indigo-600");
+        navInput.classList.add("text-teal-600");
         navInput.classList.remove("text-gray-400");
         navDashboard.classList.add("text-gray-400");
-        navDashboard.classList.remove("text-indigo-600");
+        navDashboard.classList.remove("text-teal-600");
       }
       return;
     }
@@ -31,10 +31,10 @@ function initMobileTabs() {
     tabInput.classList.add("hidden", "lg:block");
 
     if (navInput && navDashboard) {
-      navDashboard.classList.add("text-indigo-600");
+      navDashboard.classList.add("text-teal-600");
       navDashboard.classList.remove("text-gray-400");
       navInput.classList.add("text-gray-400");
-      navInput.classList.remove("text-indigo-600");
+      navInput.classList.remove("text-teal-600");
     }
   }
 

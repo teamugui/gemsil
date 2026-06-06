@@ -10,6 +10,7 @@
     <!-- First-launch currency setup gate -->
     <div
       id="currency-setup"
+      data-component-id="app.currency-setup"
       class="hidden fixed inset-0 bg-white z-40 flex items-center justify-center p-6"
     >
       <div class="max-w-sm w-full text-center">
@@ -21,7 +22,7 @@
         <div class="grid grid-cols-2 gap-4">
           <button
             data-currency-choice="KRW"
-            class="py-8 rounded-2xl border-2 border-gray-200 hover:border-indigo-500 hover:bg-indigo-50 transition"
+            class="py-8 rounded-2xl border-2 border-gray-200 hover:border-teal-500 hover:bg-teal-50 transition"
           >
             <div class="text-4xl mb-1">₩</div>
             <div class="font-semibold">KRW</div>
@@ -29,7 +30,7 @@
           </button>
           <button
             data-currency-choice="JPY"
-            class="py-8 rounded-2xl border-2 border-gray-200 hover:border-indigo-500 hover:bg-indigo-50 transition"
+            class="py-8 rounded-2xl border-2 border-gray-200 hover:border-teal-500 hover:bg-teal-50 transition"
           >
             <div class="text-4xl mb-1">¥</div>
             <div class="font-semibold">JPY</div>
@@ -40,7 +41,7 @@
     </div>
 
     <!-- Main app -->
-    <div id="main-app" class="hidden max-w-5xl mx-auto p-4 lg:p-8">
+    <div id="main-app" data-component-id="app.shell" class="hidden max-w-5xl mx-auto p-4 lg:p-8">
       <header class="hidden lg:block py-4 mb-4">
         <h1 class="text-2xl font-bold">gemsil</h1>
       </header>
@@ -48,10 +49,10 @@
       <div class="lg:grid lg:grid-cols-2 lg:gap-8 lg:items-start">
         
         <!-- Input Section -->
-        <section id="tab-input" class="block">
+        <section id="tab-input" data-component-id="expense.input.section" class="block">
           <h2 id="entry-page-title" class="text-xl font-bold mb-4">지출 입력</h2>
           
-          <form id="expense-form" class="bg-white rounded-2xl shadow-sm p-5 space-y-4">
+          <form id="expense-form" data-component-id="expense.input.form" class="bg-white rounded-2xl shadow-sm p-5 space-y-4">
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label for="amount" class="block text-sm font-medium mb-1">
@@ -65,7 +66,7 @@
                   inputmode="decimal"
                   required
                   placeholder="예시 : 15000"
-                  class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"
                 />
               </div>
               <div>
@@ -74,13 +75,13 @@
                   id="merchant"
                   type="text"
                   placeholder="예시 : 카페"
-                  class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"
                 />
               </div>
-              <div id="amount-quick-buttons" class="hidden col-span-2 grid grid-cols-3 gap-1.5 sm:grid-cols-6">
-                <button type="button" data-amount-quick-delta="1000" class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700">+1,000</button>
-                <button type="button" data-amount-quick-delta="10000" class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700">+10,000</button>
-                <button type="button" data-amount-quick-delta="50000" class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700">+50,000</button>
+              <div id="amount-quick-buttons" data-component-id="expense.input.amount-quick-buttons" class="hidden col-span-2 grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+                <button type="button" data-amount-quick-delta="1000" class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:border-teal-300 hover:bg-teal-50 hover:text-teal-700">+1,000</button>
+                <button type="button" data-amount-quick-delta="10000" class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:border-teal-300 hover:bg-teal-50 hover:text-teal-700">+10,000</button>
+                <button type="button" data-amount-quick-delta="50000" class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:border-teal-300 hover:bg-teal-50 hover:text-teal-700">+50,000</button>
                 <button type="button" data-amount-quick-delta="-1000" class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">-1,000</button>
                 <button type="button" data-amount-quick-delta="-10000" class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">-10,000</button>
                 <button type="button" data-amount-quick-delta="-50000" class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">-50,000</button>
@@ -103,37 +104,37 @@
                   id="description"
                   type="text"
                   placeholder="예시 : 친구와 점심에 커피"
-                  class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"
                 />
               </div>
             </div>
             <div>
               <label class="block text-sm font-medium mb-1">결제 유형</label>
-              <div class="grid grid-cols-3 gap-2">
+              <div data-component-id="expense.input.payment-type" class="grid grid-cols-3 gap-2">
                 <label class="cursor-pointer">
                   <input type="radio" name="payment_type" value="once" checked class="peer sr-only" />
-                  <span class="flex h-full items-center justify-center text-center text-sm font-semibold py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:border-indigo-600">일회성</span>
+                  <span class="flex h-full items-center justify-center text-center text-sm font-semibold py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-teal-600 peer-checked:text-white peer-checked:border-teal-600">일회성</span>
                 </label>
                 <label class="cursor-pointer">
                   <input type="radio" name="payment_type" value="monthly" class="peer sr-only" />
-                  <span class="flex h-full items-center justify-center text-center text-sm font-semibold py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:border-indigo-600">월간결제</span>
+                  <span class="flex h-full items-center justify-center text-center text-sm font-semibold py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-teal-600 peer-checked:text-white peer-checked:border-teal-600">월간결제</span>
                 </label>
                 <label class="cursor-pointer">
                   <input type="radio" name="payment_type" value="annual" class="peer sr-only" />
-                  <span class="flex h-full items-center justify-center text-center text-sm font-semibold py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:border-indigo-600">연간결제</span>
+                  <span class="flex h-full items-center justify-center text-center text-sm font-semibold py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-teal-600 peer-checked:text-white peer-checked:border-teal-600">연간결제</span>
                 </label>
               </div>
             </div>
             <button
               type="submit"
-              class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg transition"
+              class="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 rounded-lg transition"
             >
               저장
             </button>
           </form>
 
           <!-- Exchange rate calculator -->
-          <div class="mt-4 bg-white rounded-2xl shadow-sm p-5">
+          <div data-component-id="expense.fx.calculator" class="mt-4 bg-white rounded-2xl shadow-sm p-5">
             <button
               id="fx-toggle"
               type="button"
@@ -144,7 +145,7 @@
                 <span id="fx-from-currency">USD</span> → <span data-base-currency>KRW</span>
               </span>
             </button>
-            <div id="fx-panel" class="hidden mt-4 space-y-3">
+            <div id="fx-panel" data-component-id="expense.fx.panel" class="hidden mt-4 space-y-3">
               <div class="flex gap-2">
                 <input
                   id="fx-amount"
@@ -152,9 +153,9 @@
                   step="any"
                   min="0"
                   placeholder="예시 : 49.99"
-                  class="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  class="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"
                 />
-                <select id="fx-currency" class="shrink-0 rounded-lg border border-gray-300 px-2 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"></select>
+                <select id="fx-currency" class="shrink-0 rounded-lg border border-gray-300 px-2 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-teal-400"></select>
                 <button
                   id="fx-calc-btn"
                   type="button"
@@ -167,7 +168,7 @@
                 id="fx-apply-btn"
                 type="button"
                 disabled
-                class="w-full border border-gray-300 text-gray-400 py-2 rounded-lg transition disabled:cursor-not-allowed disabled:bg-gray-50 enabled:border-indigo-500 enabled:text-indigo-600 enabled:hover:bg-indigo-50"
+                class="w-full border border-gray-300 text-gray-400 py-2 rounded-lg transition disabled:cursor-not-allowed disabled:bg-gray-50 enabled:border-teal-500 enabled:text-teal-600 enabled:hover:bg-teal-50"
               >
                 계산할 금액을 입력해주세요
               </button>
@@ -179,17 +180,17 @@
         </section>
 
         <!-- Dashboard Section -->
-        <section id="tab-dashboard" class="hidden lg:block">
+        <section id="tab-dashboard" data-component-id="expense.dashboard.section" class="hidden lg:block">
           <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
             대시보드
             <select
               id="month-select"
-              class="text-sm font-normal text-gray-600 border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              class="text-sm font-normal text-gray-600 border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-teal-400"
             ></select>
           </h2>
 
           <!-- Summary cards -->
-          <div class="grid grid-cols-3 gap-3 mb-4">
+          <div data-component-id="expense.dashboard.summary" class="grid grid-cols-3 gap-3 mb-4">
             <div class="bg-white rounded-2xl shadow-sm p-4 text-center">
               <div class="text-xs text-gray-400 mb-1">고정 지출</div>
               <div id="fixed-amount" class="text-base font-bold text-amber-600">-</div>
@@ -205,21 +206,21 @@
           </div>
 
           <!-- Filter -->
-          <div class="flex flex-wrap gap-2 mb-4 text-sm">
-            <button data-filter="all" class="px-3 py-1 rounded-full border border-gray-200 bg-indigo-600 text-white transition">전체</button>
+          <div data-component-id="expense.dashboard.filter" class="flex flex-wrap gap-2 mb-4 text-sm">
+            <button data-filter="all" class="px-3 py-1 rounded-full border border-gray-200 bg-teal-600 text-white transition">전체</button>
             <button data-filter="once" class="px-3 py-1 rounded-full border border-gray-200 transition">일반</button>
             <button data-filter="monthly" class="px-3 py-1 rounded-full border border-gray-200 transition">월 정기</button>
             <button data-filter="annual" class="px-3 py-1 rounded-full border border-gray-200 transition">연 정기</button>
           </div>
 
           <!-- Expense list -->
-          <div id="expense-list" class="space-y-3"></div>
+          <div id="expense-list" data-component-id="expense.dashboard.list" class="space-y-3"></div>
         </section>
       </div>
       
       <!-- Mobile Bottom Navigation -->
-      <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex lg:hidden z-30 pb-safe">
-        <button id="nav-input" class="flex-1 py-3 flex flex-col items-center justify-center gap-1 text-indigo-600 font-semibold transition">
+      <nav data-component-id="app.mobile-nav" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex lg:hidden z-30 pb-safe">
+        <button id="nav-input" class="flex-1 py-3 flex flex-col items-center justify-center gap-1 text-teal-600 font-semibold transition">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
           <span class="text-[10px]">입력</span>
         </button>
