@@ -713,7 +713,9 @@ func main() {
 	r.Use(middleware.Recoverer)
 
 	r.Get("/", renderPage("index.html"))
-	r.Get("/dashboard", renderPage("dashboard.html"))
+	r.Get("/dashboard", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/", http.StatusMovedPermanently)
+	})
 
 	staticSub, err := fs.Sub(staticFS, "static")
 	if err != nil {

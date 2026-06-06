@@ -1,6 +1,6 @@
 // gemsil — shared frontend utilities used by both the input and dashboard pages.
 
-const PAYMENT_LABELS = { once: "일회성", monthly: "월간결제", annual: "연간결제" };
+const PAYMENT_LABELS = { once: "일회성", monthly: "월간", annual: "연간" };
 const CURRENCY_LOCALE = { KRW: "ko-KR", JPY: "ja-JP" };
 
 // Currencies offered in the exchange-rate calculator (the user's base currency
@@ -106,6 +106,9 @@ async function initIndexPage() {
           setupEl.classList.add("hidden");
           appEl.classList.remove("hidden");
           setupIndexApp(chosen);
+          if (typeof loadDashboard === "function" && typeof selectedDashboardMonth === "function") {
+            await loadDashboard(selectedDashboardMonth());
+          }
         } catch (err) {
           alert(err.message);
         }
@@ -233,6 +236,9 @@ function setupIndexApp(currency) {
       document.querySelector('input[name="payment_type"][value="once"]').checked = true;
       setOptionalFieldsOpen(false);
       resetFxApplyButton();
+      if (typeof loadDashboard === 'function' && typeof selectedDashboardMonth === 'function') {
+        await loadDashboard(selectedDashboardMonth());
+      }
     } catch (err) {
       showToast(err.message, true);
     }
@@ -595,13 +601,13 @@ function renderDashboardEditForm(it) {
           <label class="cursor-pointer">
             <input type="radio" name="edit-payment-type-${it.id}" value="monthly"${isChecked("monthly")} class="peer sr-only" />
             <span class="flex h-full items-center justify-center text-center text-sm font-semibold py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:border-indigo-600">
-              월간결제
+              월간
             </span>
           </label>
           <label class="cursor-pointer">
             <input type="radio" name="edit-payment-type-${it.id}" value="annual"${isChecked("annual")} class="peer sr-only" />
             <span class="flex h-full items-center justify-center text-center text-sm font-semibold py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:border-indigo-600">
-              연간결제
+              연간
             </span>
           </label>
         </div>
@@ -675,8 +681,8 @@ function renderDashboardFixedControls(it) {
 }
 
 function recurringEndButtonLabel(paymentType) {
-  if (paymentType === "annual") return "정기결제 종료 - 다음년도부터 중단";
-  return "정기결제 종료 - 다음달부터 중단";
+  if (paymentType === "annual") return "연간결제종료";
+  return "월간결제종료";
 }
 
 function updateDashboardRecurringControls(form) {
@@ -878,3 +884,39 @@ async function deleteDashboardExpense(id) {
     showToast(err.message, true);
   }
 }
+
+// Global tab switching function for mobile SPA
+window.switchTab = function(tab) {
+  const tabInput = document.getElementById('tab-input');
+  const tabDashboard = document.getElementById('tab-dashboard');
+  const navInput = document.getElementById('nav-input');
+  const navDashboard = document.getElementById('nav-dashboard');
+
+  if (!tabInput || !tabDashboard) return;
+
+  if (tab === 'input') {
+    tabInput.classList.remove('hidden');
+    tabInput.classList.add('block');
+    tabDashboard.classList.remove('block');
+    tabDashboard.classList.add('hidden', 'lg:block');
+
+    if (navInput && navDashboard) {
+      navInput.classList.add('text-indigo-600');
+      navInput.classList.remove('text-gray-400');
+      navDashboard.classList.add('text-gray-400');
+      navDashboard.classList.remove('text-indigo-600');
+    }
+  } else {
+    tabDashboard.classList.remove('hidden');
+    tabDashboard.classList.add('block');
+    tabInput.classList.remove('block');
+    tabInput.classList.add('hidden', 'lg:block');
+
+    if (navInput && navDashboard) {
+      navDashboard.classList.add('text-indigo-600');
+      navDashboard.classList.remove('text-gray-400');
+      navInput.classList.add('text-gray-400');
+      navInput.classList.remove('text-indigo-600');
+    }
+  }
+};
