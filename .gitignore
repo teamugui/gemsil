@@ -1,0 +1,27 @@
+# Go
+/bin/
+/dist/
+*.exe
+*.test
+*.out
+# Compiled binary (go build outputs ./gemsil, matching the module name)
+/gemsil
+
+# Database (local SQLite runtime data)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Env
+.env
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

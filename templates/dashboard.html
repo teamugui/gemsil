@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>gemsil · 대시보드</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-50 text-gray-800 min-h-screen">
+    <div class="max-w-lg mx-auto p-4">
+      <header class="flex items-center justify-between py-4">
+        <h1 class="text-xl font-bold flex items-center gap-2">
+          대시보드
+          <select
+            id="month-select"
+            class="text-sm font-normal text-gray-600 border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          ></select>
+        </h1>
+        <a href="/" class="text-sm text-indigo-600 hover:underline">← 입력</a>
+      </header>
+
+      <!-- Summary cards -->
+      <div class="grid grid-cols-3 gap-3 mb-4">
+        <div class="bg-white rounded-2xl shadow-sm p-4 text-center">
+          <div class="text-xs text-gray-400 mb-1">고정 지출</div>
+          <div id="fixed-amount" class="text-base font-bold text-amber-600">-</div>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm p-4 text-center">
+          <div class="text-xs text-gray-400 mb-1">변동 지출</div>
+          <div id="variable-amount" class="text-base font-bold text-sky-600">-</div>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm p-4 text-center">
+          <div class="text-xs text-gray-400 mb-1">합계</div>
+          <div id="total-amount" class="text-base font-bold text-gray-900">-</div>
+        </div>
+      </div>
+
+      <!-- Filter -->
+      <div class="flex flex-wrap gap-2 mb-4 text-sm">
+        <button
+          data-filter="all"
+          class="px-3 py-1 rounded-full border border-gray-200 bg-indigo-600 text-white transition"
+        >
+          전체
+        </button>
+        <button data-filter="once" class="px-3 py-1 rounded-full border border-gray-200 transition">
+          일반
+        </button>
+        <button data-filter="monthly" class="px-3 py-1 rounded-full border border-gray-200 transition">
+          월 정기
+        </button>
+        <button data-filter="annual" class="px-3 py-1 rounded-full border border-gray-200 transition">
+          연 정기
+        </button>
+      </div>
+
+      <!-- Expense list -->
+      <div id="expense-list" class="space-y-3"></div>
+    </div>
+
+    <div id="toast" class="hidden"></div>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+      initDashboardPage();
+    </script>
+  </body>
+</html>

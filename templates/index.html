@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>gemsil · 지출 입력</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-50 text-gray-800 min-h-screen">
+    <!-- First-launch currency setup gate -->
+    <div
+      id="currency-setup"
+      class="hidden fixed inset-0 bg-white z-40 flex items-center justify-center p-6"
+    >
+      <div class="max-w-sm w-full text-center">
+        <h1 class="text-3xl font-bold mb-2">gemsil</h1>
+        <p class="text-gray-500 mb-8">
+          사용할 기준 통화를 선택하세요.<br />
+          한 번 설정하면 변경할 수 없습니다.
+        </p>
+        <div class="grid grid-cols-2 gap-4">
+          <button
+            data-currency-choice="KRW"
+            class="py-8 rounded-2xl border-2 border-gray-200 hover:border-indigo-500 hover:bg-indigo-50 transition"
+          >
+            <div class="text-4xl mb-1">₩</div>
+            <div class="font-semibold">KRW</div>
+            <div class="text-xs text-gray-400">대한민국 원</div>
+          </button>
+          <button
+            data-currency-choice="JPY"
+            class="py-8 rounded-2xl border-2 border-gray-200 hover:border-indigo-500 hover:bg-indigo-50 transition"
+          >
+            <div class="text-4xl mb-1">¥</div>
+            <div class="font-semibold">JPY</div>
+            <div class="text-xs text-gray-400">일본 엔</div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main app -->
+    <div id="main-app" class="hidden max-w-lg mx-auto p-4">
+      <header class="flex items-center justify-between py-4">
+        <h1 id="entry-title" class="text-xl font-bold">지출 입력</h1>
+        <a href="/dashboard" class="text-sm text-indigo-600 hover:underline">대시보드 →</a>
+      </header>
+
+      <form id="expense-form" class="bg-white rounded-2xl shadow-sm p-5 space-y-4">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-medium mb-1">
+              지출액 (<span data-base-currency>KRW</span>)
+            </label>
+            <input
+              id="amount"
+              type="number"
+              step="any"
+              min="0"
+              inputmode="decimal"
+              required
+              placeholder="얼마를 썼습니까"
+              class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">지출처</label>
+            <input
+              id="merchant"
+              type="text"
+              placeholder="어디에 썼습니까"
+              class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            />
+          </div>
+          <div id="amount-quick-buttons" class="hidden col-span-2 grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+            <button
+              type="button"
+              data-amount-quick-delta="1000"
+              class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700"
+            >
+              +1,000
+            </button>
+            <button
+              type="button"
+              data-amount-quick-delta="10000"
+              class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700"
+            >
+              +10,000
+            </button>
+            <button
+              type="button"
+              data-amount-quick-delta="50000"
+              class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700"
+            >
+              +50,000
+            </button>
+            <button
+              type="button"
+              data-amount-quick-delta="-1000"
+              class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+            >
+              -1,000
+            </button>
+            <button
+              type="button"
+              data-amount-quick-delta="-10000"
+              class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+            >
+              -10,000
+            </button>
+            <button
+              type="button"
+              data-amount-quick-delta="-50000"
+              class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+            >
+              -50,000
+            </button>
+          </div>
+        </div>
+        <div>
+          <button
+            id="optional-toggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="optional-fields"
+            class="flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-900"
+          >
+            <span id="optional-toggle-icon">▶</span>
+            <span>지출 내용</span>
+          </button>
+          <div id="optional-fields" class="hidden mt-3">
+            <input
+              id="description"
+              type="text"
+              placeholder="설명을 해주세요"
+              class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            />
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">결제 유형</label>
+          <div class="grid grid-cols-3 gap-2">
+            <label class="cursor-pointer">
+              <input type="radio" name="payment_type" value="once" checked class="peer sr-only" />
+              <span
+                class="flex h-full items-center justify-center text-center text-sm font-semibold py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:border-indigo-600"
+              >
+                일회성
+              </span>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="payment_type" value="monthly" class="peer sr-only" />
+              <span
+                class="flex h-full items-center justify-center text-center text-sm font-semibold py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:border-indigo-600"
+              >
+                월간결제
+              </span>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="payment_type" value="annual" class="peer sr-only" />
+              <span
+                class="flex h-full items-center justify-center text-center text-sm font-semibold py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:border-indigo-600"
+              >
+                연간결제
+              </span>
+            </label>
+          </div>
+        </div>
+        <button
+          type="submit"
+          class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg transition"
+        >
+          저장
+        </button>
+      </form>
+
+      <!-- Exchange rate calculator -->
+      <div class="mt-4 bg-white rounded-2xl shadow-sm p-5">
+        <button
+          id="fx-toggle"
+          type="button"
+          class="w-full flex items-center justify-between text-left"
+        >
+          <span class="font-medium">환율 계산기</span>
+          <span class="text-gray-400 text-sm">
+            <span id="fx-from-currency">USD</span> → <span data-base-currency>KRW</span>
+          </span>
+        </button>
+        <div id="fx-panel" class="hidden mt-4 space-y-3">
+          <div class="flex gap-2">
+            <input
+              id="fx-amount"
+              type="number"
+              step="any"
+              min="0"
+              placeholder="외화 금액"
+              class="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            />
+            <select
+              id="fx-currency"
+              class="shrink-0 rounded-lg border border-gray-300 px-2 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            ></select>
+            <button
+              id="fx-calc-btn"
+              type="button"
+              class="shrink-0 bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg transition"
+            >
+              계산
+            </button>
+          </div>
+          <button
+            id="fx-apply-btn"
+            type="button"
+            disabled
+            class="w-full border border-gray-300 text-gray-400 py-2 rounded-lg transition disabled:cursor-not-allowed disabled:bg-gray-50 enabled:border-indigo-500 enabled:text-indigo-600 enabled:hover:bg-indigo-50"
+          >
+            계산할 금액을 입력해주세요
+          </button>
+          <p class="text-xs text-gray-400 text-center">
+            환율은 참고용입니다. 변환된 금액을 확인 후 입력하세요.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast" class="hidden"></div>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+      initIndexPage();
+    </script>
+  </body>
+</html>
