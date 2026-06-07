@@ -29,6 +29,7 @@ func New(h *handler.Handler, staticFS fs.FS) http.Handler {
 		r.Get("/expenses", h.ListExpenses)
 		r.Put("/expenses/{id}", h.UpdateExpense)
 		r.Delete("/expenses/{id}", h.DeleteExpense)
+		r.Get("/merchants", h.SuggestMerchants)
 		r.Get("/expense-goals", h.GetExpenseGoal)
 		r.Post("/expense-goals", h.CreateExpenseGoal)
 		r.Get("/expense-goals/history", h.ListExpenseGoalHistory)

@@ -3,6 +3,7 @@ package store
 import (
 	"database/sql"
 	"errors"
+	"strings"
 
 	"gemsil/internal/model"
 )
@@ -130,6 +131,47 @@ func (s *Store) ActiveExpenses(ym string) ([]model.Expense, error) {
 		expenses = append(expenses, e)
 	}
 	return expenses, rows.Err()
+}
+
+// likeEscape escapes the LIKE wildcards so the query is matched as literal text.
+// The matching SQL uses `ESCAPE '\'`.
+func likeEscape(s string) string {
+	r := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+	return r.Replace(s)
+}
+
+// SuggestMerchants returns up to limit distinct, non-empty merchant names whose
+// text contains query (case-insensitive substring), most-used first. The result
+// is always non-nil. An empty result is returned for an empty query.
+func (s *Store) SuggestMerchants(query string, limit int) ([]string, error) {
+	out := []string{}
+	query = strings.TrimSpace(query)
+	if query == "" || limit <= 0 {
+		return out, nil
+	}
+
+	pattern := "%" + likeEscape(query) + "%"
+	rows, err := s.db.Query(
+		`SELECT merchant FROM expenses
+		 WHERE trim(merchant) <> '' AND merchant LIKE ? ESCAPE '\'
+		 GROUP BY merchant
+		 ORDER BY COUNT(*) DESC, MAX(date) DESC
+		 LIMIT ?`,
+		pattern, limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var m string
+		if err := rows.Scan(&m); err != nil {
+			return nil, err
+		}
+		out = append(out, m)
+	}
+	return out, rows.Err()
 }
 
 // EarliestExpenseMonth returns the earliest "YYYY-MM" any expense was dated in,

@@ -4,6 +4,7 @@ import {
   api,
   clampedAmountAfterDelta,
   dispatchAppEvent,
+  escapeHtml,
   getCurrency,
   showToast,
 } from "./helper.js";
@@ -123,6 +124,7 @@ function setupFormApp(currency) {
   }
 
   const resetFxApplyButton = initFxCalculator(() => activeCurrency);
+  const closeMerchantSuggestions = initMerchantAutocomplete();
 
   const form = document.getElementById("expense-form");
   if (form && amountInput) {
@@ -146,6 +148,7 @@ function setupFormApp(currency) {
         });
         showToast("저장되었습니다.");
         form.reset();
+        if (closeMerchantSuggestions) closeMerchantSuggestions();
         setAmountQuickButtonsVisible(false);
         document.querySelector('input[name="payment_type"][value="once"]').checked = true;
         setOptionalFieldsOpen(false);
@@ -156,6 +159,122 @@ function setupFormApp(currency) {
       }
     });
   }
+}
+
+// Wires server-backed autocomplete onto the 지출처 (#merchant) input: as the user
+// types, matching past merchants are fetched and shown in a dropdown below the
+// field, selectable by click or keyboard. Returns a function that closes the
+// dropdown (used after a successful save). Returns null if the elements are absent.
+function initMerchantAutocomplete() {
+  const input = document.getElementById("merchant");
+  const listEl = document.getElementById("merchant-suggestions");
+  if (!input || !listEl) return null;
+
+  let items = [];
+  let activeIndex = -1;
+  let requestSeq = 0;
+  let debounceTimer = null;
+
+  function closeSuggestions() {
+    listEl.classList.add("hidden");
+    listEl.innerHTML = "";
+    items = [];
+    activeIndex = -1;
+  }
+
+  function renderActive() {
+    Array.from(listEl.children).forEach((li, i) => {
+      const isActive = i === activeIndex;
+      li.classList.toggle("bg-teal-50", isActive);
+      li.classList.toggle("text-teal-700", isActive);
+      if (isActive) li.scrollIntoView({ block: "nearest" });
+    });
+  }
+
+  function renderSuggestions(results) {
+    items = results;
+    activeIndex = -1;
+    if (!results.length) {
+      closeSuggestions();
+      return;
+    }
+    listEl.innerHTML = results
+      .map(
+        (m, i) =>
+          `<li role="option" data-index="${i}" class="cursor-pointer px-3 py-2 hover:bg-teal-50 hover:text-teal-700">${escapeHtml(m)}</li>`,
+      )
+      .join("");
+    listEl.classList.remove("hidden");
+  }
+
+  function selectItem(index) {
+    if (index < 0 || index >= items.length) return;
+    input.value = items[index];
+    closeSuggestions();
+    input.focus();
+  }
+
+  async function fetchSuggestions(query) {
+    const seq = ++requestSeq;
+    try {
+      const results = await api(`/api/merchants?q=${encodeURIComponent(query)}`);
+      if (seq !== requestSeq) return; // a newer request superseded this one
+      renderSuggestions(Array.isArray(results) ? results : []);
+    } catch {
+      if (seq === requestSeq) closeSuggestions();
+    }
+  }
+
+  input.addEventListener("input", () => {
+    const query = input.value.trim();
+    clearTimeout(debounceTimer);
+    if (!query) {
+      requestSeq++; // invalidate any in-flight response
+      closeSuggestions();
+      return;
+    }
+    debounceTimer = setTimeout(() => fetchSuggestions(query), 150);
+  });
+
+  input.addEventListener("keydown", (e) => {
+    if (listEl.classList.contains("hidden") || !items.length) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      activeIndex = (activeIndex + 1) % items.length;
+      renderActive();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      activeIndex = (activeIndex - 1 + items.length) % items.length;
+      renderActive();
+    } else if (e.key === "Enter") {
+      if (activeIndex >= 0) {
+        e.preventDefault();
+        selectItem(activeIndex);
+      }
+    } else if (e.key === "Escape") {
+      closeSuggestions();
+    }
+  });
+
+  // mousedown fires before the input loses focus; preventing default keeps focus
+  // on the input so the subsequent click can apply the selection.
+  listEl.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+  });
+  listEl.addEventListener("click", (e) => {
+    const li = e.target.closest("[data-index]");
+    if (!li) return;
+    selectItem(Number(li.getAttribute("data-index")));
+  });
+
+  // Close when focus moves outside the input and its suggestion list.
+  document.addEventListener("focusin", (e) => {
+    if (e.target !== input && !listEl.contains(e.target)) {
+      closeSuggestions();
+    }
+  });
+
+  return closeSuggestions;
 }
 
 function renderEntryTitle() {

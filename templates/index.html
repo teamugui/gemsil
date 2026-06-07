@@ -78,12 +78,20 @@
               </div>
               <div>
                 <label for="merchant" class="block text-sm font-medium mb-1">지출처</label>
-                <input
-                  id="merchant"
-                  type="text"
-                  placeholder="예시 : 카페"
-                  class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"
-                />
+                <div class="relative">
+                  <input
+                    id="merchant"
+                    type="text"
+                    autocomplete="off"
+                    placeholder="예시 : 카페"
+                    class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  />
+                  <ul
+                    id="merchant-suggestions"
+                    role="listbox"
+                    class="hidden absolute z-20 left-0 right-0 mt-1 max-h-56 overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg text-sm"
+                  ></ul>
+                </div>
               </div>
               <div id="amount-quick-buttons" data-component-id="expense.input.amount-quick-buttons" class="hidden col-span-2 grid grid-cols-3 gap-1.5 sm:grid-cols-6">
                 <button type="button" data-amount-quick-delta="1000" class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-600 hover:border-teal-300 hover:bg-teal-50 hover:text-teal-700">+1,000</button>
@@ -287,7 +295,7 @@
               대시보드
               <select
                 id="month-select"
-                class="text-sm font-normal text-gray-600 border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-teal-400"
+                class="text-sm font-normal text-gray-600 border border-gray-200 rounded-full px-3 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-teal-400"
               ></select>
             </span>
             <button id="nav-to-input" type="button" class="lg:hidden flex items-center gap-1 text-sm font-medium text-teal-600">

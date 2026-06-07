@@ -280,7 +280,7 @@ export function editFormHtml(it, currency) {
         </div>`
       : "";
   return `
-    <form data-component-id="expense.dashboard.edit-form" data-edit-form="${it.id}" class="mt-2 bg-gray-50 border border-gray-200 rounded-2xl p-5 space-y-4">
+    <form data-component-id="expense.dashboard.edit-form" data-edit-form="${it.id}" class="mt-3 bg-white rounded-2xl p-5 space-y-3 shadow-sm">
       <div class="grid grid-cols-2 gap-3">
         <div>
           <label class="block text-sm font-medium mb-1">
@@ -296,7 +296,7 @@ export function editFormHtml(it, currency) {
             value="${escapeHtml(amountValue)}"
             placeholder="얼마를 썼습니까"
             data-edit-amount-input="${it.id}"
-            class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"
+            class="w-full bg-gray-50 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"
           />
         </div>
         <div>

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"path/filepath"
 	"strconv"
 	"testing"
@@ -479,6 +480,57 @@ func TestCreateActualExpenseRejectsUnchangedAmount(t *testing.T) {
 	}
 	if count != 2 {
 		t.Fatalf("actual row count = %d, want 2 (unchanged submission must not insert)", count)
+	}
+}
+
+func suggestMerchants(t *testing.T, h *Handler, q string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, "/api/merchants?q="+url.QueryEscape(q), nil)
+	rec := httptest.NewRecorder()
+	h.SuggestMerchants(rec, req)
+	return rec
+}
+
+func TestSuggestMerchantsReturnsMatches(t *testing.T) {
+	h, db := setupTestHandler(t)
+	for _, m := range []string{"스타벅스", "스타벅스", "투썸플레이스"} {
+		if _, err := db.Exec(
+			`INSERT INTO expenses (amount, merchant, description, payment_type, date, created_at, start_month)
+			 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			100, m, "", "once", "2026-01-01", "2026-01-01T00:00:00Z", "2026-01"); err != nil {
+			t.Fatalf("seed: %v", err)
+		}
+	}
+
+	rec := suggestMerchants(t, h, "스타")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d: %s", rec.Code, rec.Body.String())
+	}
+	var got []string
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(got) != 1 || got[0] != "스타벅스" {
+		t.Fatalf("suggestions = %v, want [스타벅스]", got)
+	}
+}
+
+func TestSuggestMerchantsEmptyQueryReturnsEmptyArray(t *testing.T) {
+	h, db := setupTestHandler(t)
+	if _, err := db.Exec(
+		`INSERT INTO expenses (amount, merchant, description, payment_type, date, created_at, start_month)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		100, "스타벅스", "", "once", "2026-01-01", "2026-01-01T00:00:00Z", "2026-01"); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	rec := suggestMerchants(t, h, "  ")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d: %s", rec.Code, rec.Body.String())
+	}
+	// Must be a JSON array (not null), and empty for a blank query.
+	if body := rec.Body.String(); body != "[]\n" && body != "[]" {
+		t.Fatalf("body = %q, want empty JSON array", body)
 	}
 }
 

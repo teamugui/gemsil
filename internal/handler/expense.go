@@ -3,10 +3,14 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"gemsil/internal/model"
 )
+
+// merchantSuggestionLimit caps how many merchant autocomplete results are returned.
+const merchantSuggestionLimit = 8
 
 func (h *Handler) CreateExpense(w http.ResponseWriter, r *http.Request) {
 	var in struct {
@@ -75,6 +79,22 @@ func (h *Handler) ListExpenses(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, expenses)
+}
+
+// SuggestMerchants returns merchant names matching the `q` query parameter, for
+// autocompleting the expense form's 지출처 field. A blank query yields an empty list.
+func (h *Handler) SuggestMerchants(w http.ResponseWriter, r *http.Request) {
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	if q == "" {
+		writeJSON(w, http.StatusOK, []string{})
+		return
+	}
+	merchants, err := h.store.SuggestMerchants(q, merchantSuggestionLimit)
+	if err != nil {
+		httpError(w, http.StatusInternalServerError, "조회에 실패했습니다.")
+		return
+	}
+	writeJSON(w, http.StatusOK, merchants)
 }
 
 func (h *Handler) UpdateExpense(w http.ResponseWriter, r *http.Request) {

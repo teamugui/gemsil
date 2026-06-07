@@ -3,6 +3,7 @@ package store
 import (
 	"database/sql"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -146,5 +147,81 @@ func TestCumulativeSavingsNilWhenNoQualifyingMonth(t *testing.T) {
 	}
 	if got != nil {
 		t.Fatalf("CumulativeSavings = %v, want nil", *got)
+	}
+}
+
+// seedMerchant appends a one-time expense with the given merchant and date,
+// used to exercise the merchant-suggestion query.
+func seedMerchant(t *testing.T, s *Store, merchant, date string) {
+	t.Helper()
+	if _, err := s.db.Exec(
+		`INSERT INTO expenses (amount, merchant, description, payment_type, date, created_at, start_month)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		100, merchant, "", "once", date, date+"T00:00:00Z", date[:7]); err != nil {
+		t.Fatalf("seed merchant: %v", err)
+	}
+}
+
+func TestSuggestMerchants(t *testing.T) {
+	s, err := Open(filepath.Join(t.TempDir(), "test.db"))
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer s.Close()
+
+	seedMerchant(t, s, "스타벅스", "2026-01-01")
+	seedMerchant(t, s, "스타벅스", "2026-01-02")
+	seedMerchant(t, s, "스타벅스", "2026-01-03") // 3x → most used
+	seedMerchant(t, s, "스타벅스 강남", "2026-02-01")
+	seedMerchant(t, s, "투썸플레이스", "2026-02-02")
+	seedMerchant(t, s, "", "2026-02-03")   // empty → excluded
+	seedMerchant(t, s, "  ", "2026-02-04") // whitespace-only → excluded
+
+	// Substring match, most-used first.
+	got, err := s.SuggestMerchants("스타", 8)
+	if err != nil {
+		t.Fatalf("SuggestMerchants: %v", err)
+	}
+	want := []string{"스타벅스", "스타벅스 강남"}
+	if len(got) != len(want) || got[0] != want[0] || got[1] != want[1] {
+		t.Fatalf("SuggestMerchants(\"스타\") = %v, want %v", got, want)
+	}
+
+	// Empty/whitespace merchants must never be suggested.
+	if got, err := s.SuggestMerchants("", 8); err != nil {
+		t.Fatalf("SuggestMerchants(empty): %v", err)
+	} else {
+		for _, m := range got {
+			if strings.TrimSpace(m) == "" {
+				t.Fatalf("SuggestMerchants returned empty merchant: %q", m)
+			}
+		}
+	}
+
+	// limit caps the number of results.
+	if got, err := s.SuggestMerchants("스", 1); err != nil {
+		t.Fatalf("SuggestMerchants(limit 1): %v", err)
+	} else if len(got) != 1 {
+		t.Fatalf("SuggestMerchants(limit 1) returned %d rows, want 1", len(got))
+	}
+}
+
+// LIKE wildcards in the query must be matched literally, not as patterns.
+func TestSuggestMerchantsEscapesWildcards(t *testing.T) {
+	s, err := Open(filepath.Join(t.TempDir(), "test.db"))
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer s.Close()
+
+	seedMerchant(t, s, "50%할인마트", "2026-01-01")
+	seedMerchant(t, s, "5050편의점", "2026-01-02")
+
+	got, err := s.SuggestMerchants("50%", 8)
+	if err != nil {
+		t.Fatalf("SuggestMerchants: %v", err)
+	}
+	if len(got) != 1 || got[0] != "50%할인마트" {
+		t.Fatalf("SuggestMerchants(\"50%%\") = %v, want [50%%할인마트] (literal %% match)", got)
 	}
 }
