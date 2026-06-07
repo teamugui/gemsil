@@ -191,6 +191,78 @@ func TestDashboardIncludesGoalProgress(t *testing.T) {
 	}
 }
 
+func TestDashboardReconciliationMetrics(t *testing.T) {
+	h, db := setupTestHandler(t)
+	insertRecurring(t, db, 100, "monthly", "2026-01", "") // total = 100
+	if _, err := db.Exec(
+		`INSERT INTO expense_goals (month, amount, created_at) VALUES (?, ?, ?)`,
+		"2026-01", 250.0, "2026-01-02T00:00:00Z",
+	); err != nil {
+		t.Fatalf("insert goal: %v", err)
+	}
+	if _, err := db.Exec(
+		`INSERT INTO actual_expenses (month, amount, created_at) VALUES (?, ?, ?)`,
+		"2026-01", 200.0, "2026-01-03T00:00:00Z",
+	); err != nil {
+		t.Fatalf("insert actual: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/dashboard?month=2026-01", nil)
+	rec := httptest.NewRecorder()
+	h.Dashboard(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("dashboard status %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var out struct {
+		Untracked         *float64 `json:"untracked_amount"`
+		TrackingCoverage  *float64 `json:"tracking_coverage"`
+		CumulativeSavings *float64 `json:"cumulative_savings"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if out.Untracked == nil || *out.Untracked != 100 { // actual 200 − total 100
+		t.Fatalf("untracked_amount = %v, want 100", out.Untracked)
+	}
+	if out.TrackingCoverage == nil || *out.TrackingCoverage != 0.5 { // total 100 / actual 200
+		t.Fatalf("tracking_coverage = %v, want 0.5", out.TrackingCoverage)
+	}
+	if out.CumulativeSavings == nil || *out.CumulativeSavings != 50 { // goal 250 − actual 200
+		t.Fatalf("cumulative_savings = %v, want 50", out.CumulativeSavings)
+	}
+}
+
+func TestDashboardReconciliationNullWhenUnset(t *testing.T) {
+	h, db := setupTestHandler(t)
+	insertRecurring(t, db, 100, "monthly", "2026-01", "") // total only, no goal/actual
+
+	req := httptest.NewRequest(http.MethodGet, "/api/dashboard?month=2026-01", nil)
+	rec := httptest.NewRecorder()
+	h.Dashboard(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("dashboard status %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var out struct {
+		Untracked         *float64 `json:"untracked_amount"`
+		TrackingCoverage  *float64 `json:"tracking_coverage"`
+		CumulativeSavings *float64 `json:"cumulative_savings"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if out.Untracked != nil {
+		t.Fatalf("untracked_amount = %v, want nil", *out.Untracked)
+	}
+	if out.TrackingCoverage != nil {
+		t.Fatalf("tracking_coverage = %v, want nil", *out.TrackingCoverage)
+	}
+	if out.CumulativeSavings != nil {
+		t.Fatalf("cumulative_savings = %v, want nil", *out.CumulativeSavings)
+	}
+}
+
 func TestDashboardGoalFieldsNullWhenUnset(t *testing.T) {
 	h, _ := setupTestHandler(t)
 	req := httptest.NewRequest(http.MethodGet, "/api/dashboard?month=2026-01", nil)

@@ -142,14 +142,64 @@ function compositionBarHtml(data, currency) {
     </div>`;
 }
 
-// Builds the dashboard summary card: three linear-progress bars visualizing the
-// planned total vs goal, actual spending vs goal, and the fixed/variable split.
+// Sub-label for the coverage bar describing the reconciliation gap: positive
+// untracked means money spent but never logged; negative means logged more than
+// the reported actual. Empty when the two agree.
+function untrackedText(untracked, currency) {
+  const v = Number(untracked) || 0;
+  if (v > 0) return ` · 누락 <span class="text-red-500">${formatCurrency(v, currency)}</span>`;
+  if (v < 0)
+    return ` · 초과 기록 <span class="text-gray-500">${formatCurrency(-v, currency)}</span>`;
+  return "";
+}
+
+// Bar 4 — how much of the reported actual spending is covered by logged expenses
+// (total / actual). The empty portion is money spent but never recorded. Hidden
+// until an actual snapshot exists.
+function coverageBarHtml(data, currency) {
+  if (!isSet(data.actual_amount)) return "";
+  const totalText = formatCurrency(Number(data.total) || 0, currency);
+  const actualText = formatCurrency(Number(data.actual_amount) || 0, currency);
+  const rate = Number(data.tracking_coverage);
+  return progressRowHtml({
+    name: "기록 커버리지",
+    rateLabel: Number.isFinite(rate) ? `${ratePercent(rate)}%` : "—",
+    rateClass: "text-emerald-600",
+    widthPct: clampWidth(rate),
+    fillClass: "bg-emerald-500",
+    subHtml: `기록 ${totalText} / 실제 ${actualText}${untrackedText(data.untracked_amount, currency)}`,
+  });
+}
+
+// A running Σ(goal − actual) from the earliest month through the viewed month:
+// positive is cumulatively under budget, negative is over. Hidden until a month
+// with both a goal and an actual snapshot exists.
+function cumulativeSavingsHtml(data, currency) {
+  if (!isSet(data.cumulative_savings)) return "";
+  const v = Number(data.cumulative_savings) || 0;
+  const saved = v >= 0;
+  return `
+    <div class="flex items-baseline justify-between border-t border-gray-100 pt-3">
+      <span class="text-sm font-medium text-gray-700">${saved ? "이 달까지 누적 절약" : "이 달까지 누적 초과"}</span>
+      <span class="text-sm font-semibold ${saved ? "text-emerald-600" : "text-red-500"}">${formatCurrency(
+        Math.abs(v),
+        currency,
+      )}</span>
+    </div>`;
+}
+
+// Builds the dashboard summary card: progress bars for planned total vs goal,
+// actual vs goal, logged-vs-reported coverage, and the fixed/variable split, plus
+// a cumulative savings line. Reconciliation rows hide themselves when their data
+// is absent.
 export function summaryHtml(data, currency) {
   return `
     <div class="bg-white rounded-2xl shadow-sm p-5 space-y-4">
       ${goalTotalBarHtml(data, currency)}
       ${actualBarHtml(data, currency)}
+      ${coverageBarHtml(data, currency)}
       ${compositionBarHtml(data, currency)}
+      ${cumulativeSavingsHtml(data, currency)}
     </div>`;
 }
 

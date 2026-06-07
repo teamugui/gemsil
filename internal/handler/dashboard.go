@@ -83,14 +83,22 @@ func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 
 	// Actual spending mirrors the goal block: the amount is always reported when a
 	// snapshot exists, while the goal-relative figures only resolve when a goal is
-	// also set for the month.
+	// also set for the month. The reconciliation figures (untracked = reported
+	// actual minus the logged total, and the logged/reported coverage ratio)
+	// resolve whenever an actual snapshot exists, regardless of any goal.
 	var (
-		actualAmount    any
-		actualRemaining any
-		actualUsageRate any
+		actualAmount     any
+		actualRemaining  any
+		actualUsageRate  any
+		untrackedAmount  any
+		trackingCoverage any
 	)
 	if actual, err := h.store.LatestActualExpense(ym); err == nil && actual != nil {
 		actualAmount = actual.Amount
+		untrackedAmount = actual.Amount - total
+		if actual.Amount > 0 {
+			trackingCoverage = total / actual.Amount
+		}
 		if goalValue != nil {
 			actualRemaining = *goalValue - actual.Amount
 			actualUsageRate = actual.Amount / *goalValue
@@ -100,21 +108,32 @@ func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Cumulative savings is Σ(goal − actual) from the earliest month through ym,
+	// counting only months that have both snapshots. nil means no such month.
+	cumulativeSavings, err := h.store.CumulativeSavings(ym)
+	if err != nil {
+		httpError(w, http.StatusInternalServerError, "조회에 실패했습니다.")
+		return
+	}
+
 	writeJSON(w, http.StatusOK, map[string]any{
-		"currency":          currency,
-		"month":             ym,
-		"months":            h.availableMonths(currentYM),
-		"fixed":             fixed,
-		"variable":          variable,
-		"total":             total,
-		"goal_amount":       goalAmount,
-		"goal_created_at":   goalCreatedAt,
-		"remaining_amount":  remaining,
-		"goal_usage_rate":   usageRate,
-		"actual_amount":     actualAmount,
-		"actual_remaining":  actualRemaining,
-		"actual_usage_rate": actualUsageRate,
-		"items":             items,
+		"currency":           currency,
+		"month":              ym,
+		"months":             h.availableMonths(currentYM),
+		"fixed":              fixed,
+		"variable":           variable,
+		"total":              total,
+		"goal_amount":        goalAmount,
+		"goal_created_at":    goalCreatedAt,
+		"remaining_amount":   remaining,
+		"goal_usage_rate":    usageRate,
+		"actual_amount":      actualAmount,
+		"actual_remaining":   actualRemaining,
+		"actual_usage_rate":  actualUsageRate,
+		"untracked_amount":   untrackedAmount,
+		"tracking_coverage":  trackingCoverage,
+		"cumulative_savings": cumulativeSavings,
+		"items":              items,
 	})
 }
 
