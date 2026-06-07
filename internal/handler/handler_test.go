@@ -142,6 +142,12 @@ func TestDashboardIncludesGoalProgress(t *testing.T) {
 	); err != nil {
 		t.Fatalf("insert goal: %v", err)
 	}
+	if _, err := db.Exec(
+		`INSERT INTO actual_expenses (month, amount, created_at) VALUES (?, ?, ?)`,
+		"2026-01", 200.0, "2026-01-03T00:00:00Z",
+	); err != nil {
+		t.Fatalf("insert actual: %v", err)
+	}
 
 	req := httptest.NewRequest(http.MethodGet, "/api/dashboard?month=2026-01", nil)
 	rec := httptest.NewRecorder()
@@ -151,10 +157,13 @@ func TestDashboardIncludesGoalProgress(t *testing.T) {
 	}
 
 	var out struct {
-		GoalAmount    *float64 `json:"goal_amount"`
-		Remaining     *float64 `json:"remaining_amount"`
-		GoalUsageRate *float64 `json:"goal_usage_rate"`
-		GoalCreatedAt *string  `json:"goal_created_at"`
+		GoalAmount      *float64 `json:"goal_amount"`
+		Remaining       *float64 `json:"remaining_amount"`
+		GoalUsageRate   *float64 `json:"goal_usage_rate"`
+		GoalCreatedAt   *string  `json:"goal_created_at"`
+		ActualAmount    *float64 `json:"actual_amount"`
+		ActualRemaining *float64 `json:"actual_remaining"`
+		ActualUsageRate *float64 `json:"actual_usage_rate"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
 		t.Fatalf("decode: %v", err)
@@ -171,6 +180,15 @@ func TestDashboardIncludesGoalProgress(t *testing.T) {
 	if out.GoalCreatedAt == nil || *out.GoalCreatedAt != "2026-01-02T00:00:00Z" {
 		t.Fatalf("goal_created_at = %v, want timestamp", out.GoalCreatedAt)
 	}
+	if out.ActualAmount == nil || *out.ActualAmount != 200 {
+		t.Fatalf("actual_amount = %v, want 200", out.ActualAmount)
+	}
+	if out.ActualRemaining == nil || *out.ActualRemaining != 50 {
+		t.Fatalf("actual_remaining = %v, want 50", out.ActualRemaining)
+	}
+	if out.ActualUsageRate == nil || *out.ActualUsageRate != 0.8 {
+		t.Fatalf("actual_usage_rate = %v, want 0.8", out.ActualUsageRate)
+	}
 }
 
 func TestDashboardGoalFieldsNullWhenUnset(t *testing.T) {
@@ -183,8 +201,9 @@ func TestDashboardGoalFieldsNullWhenUnset(t *testing.T) {
 	}
 
 	var out struct {
-		GoalAmount *float64 `json:"goal_amount"`
-		Remaining  *float64 `json:"remaining_amount"`
+		GoalAmount   *float64 `json:"goal_amount"`
+		Remaining    *float64 `json:"remaining_amount"`
+		ActualAmount *float64 `json:"actual_amount"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
 		t.Fatalf("decode: %v", err)
@@ -194,6 +213,9 @@ func TestDashboardGoalFieldsNullWhenUnset(t *testing.T) {
 	}
 	if out.Remaining != nil {
 		t.Fatalf("remaining_amount = %v, want nil", *out.Remaining)
+	}
+	if out.ActualAmount != nil {
+		t.Fatalf("actual_amount = %v, want nil", *out.ActualAmount)
 	}
 }
 

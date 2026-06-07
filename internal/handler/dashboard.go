@@ -69,28 +69,52 @@ func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 		remaining     any
 		usageRate     any
 	)
+	var goalValue *float64
 	if goal, err := h.store.LatestExpenseGoal(ym); err == nil && goal != nil {
 		goalAmount = goal.Amount
 		goalCreatedAt = goal.CreatedAt
 		remaining = goal.Amount - total
 		usageRate = total / goal.Amount
+		goalValue = &goal.Amount
+	} else if err != nil {
+		httpError(w, http.StatusInternalServerError, "조회에 실패했습니다.")
+		return
+	}
+
+	// Actual spending mirrors the goal block: the amount is always reported when a
+	// snapshot exists, while the goal-relative figures only resolve when a goal is
+	// also set for the month.
+	var (
+		actualAmount    any
+		actualRemaining any
+		actualUsageRate any
+	)
+	if actual, err := h.store.LatestActualExpense(ym); err == nil && actual != nil {
+		actualAmount = actual.Amount
+		if goalValue != nil {
+			actualRemaining = *goalValue - actual.Amount
+			actualUsageRate = actual.Amount / *goalValue
+		}
 	} else if err != nil {
 		httpError(w, http.StatusInternalServerError, "조회에 실패했습니다.")
 		return
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
-		"currency":         currency,
-		"month":            ym,
-		"months":           h.availableMonths(currentYM),
-		"fixed":            fixed,
-		"variable":         variable,
-		"total":            total,
-		"goal_amount":      goalAmount,
-		"goal_created_at":  goalCreatedAt,
-		"remaining_amount": remaining,
-		"goal_usage_rate":  usageRate,
-		"items":            items,
+		"currency":          currency,
+		"month":             ym,
+		"months":            h.availableMonths(currentYM),
+		"fixed":             fixed,
+		"variable":          variable,
+		"total":             total,
+		"goal_amount":       goalAmount,
+		"goal_created_at":   goalCreatedAt,
+		"remaining_amount":  remaining,
+		"goal_usage_rate":   usageRate,
+		"actual_amount":     actualAmount,
+		"actual_remaining":  actualRemaining,
+		"actual_usage_rate": actualUsageRate,
+		"items":             items,
 	})
 }
 

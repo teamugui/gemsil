@@ -12,6 +12,147 @@ import {
   formatTimestampShort,
 } from "./helper.js";
 
+// Rounds a 0..1 rate to a whole-number percent for labels (uncapped, so an
+// over-budget ratio reads e.g. "120%").
+function ratePercent(rate) {
+  return Number.isFinite(rate) ? Math.round(rate * 100) : 0;
+}
+
+// Clamps a 0..1 rate to a 0..100 bar width so an over-budget fill stops at 100%.
+function clampWidth(rate) {
+  if (!Number.isFinite(rate)) return 0;
+  return Math.max(0, Math.min(100, rate * 100));
+}
+
+function isSet(v) {
+  return v !== null && v !== undefined;
+}
+
+// One labelled single-fill progress row (used by the goal and actual bars).
+function progressRowHtml({ name, rateLabel, rateClass, widthPct, fillClass, subHtml }) {
+  return `
+    <div>
+      <div class="flex items-baseline justify-between mb-1">
+        <span class="text-sm font-medium text-gray-700">${name}</span>
+        <span class="text-sm font-medium ${rateClass}">${rateLabel}</span>
+      </div>
+      <div class="h-2.5 w-full overflow-hidden rounded-full bg-gray-100">
+        <div class="h-full rounded-full ${fillClass} transition-all duration-300" style="width: ${widthPct}%"></div>
+      </div>
+      ${subHtml ? `<div class="mt-1 text-xs text-gray-500">${subHtml}</div>` : ""}
+    </div>`;
+}
+
+// Bar 1 — planned total (fixed + variable) against the month's goal. Empty
+// portion of the track is the remaining budget; over-budget turns red.
+function goalTotalBarHtml(data, currency) {
+  const totalText = formatCurrency(Number(data.total) || 0, currency);
+  if (!isSet(data.goal_amount)) {
+    return progressRowHtml({
+      name: "합계 / 목표",
+      rateLabel: "목표 미설정",
+      rateClass: "text-gray-400",
+      widthPct: 0,
+      fillClass: "bg-teal-500",
+      subHtml: `합계 ${totalText}`,
+    });
+  }
+  const rate = Number(data.goal_usage_rate);
+  const over = rate > 1;
+  const remaining = Number(data.remaining_amount);
+  const remClass = remaining < 0 ? "text-red-500" : "text-gray-700";
+  return progressRowHtml({
+    name: "합계 / 목표",
+    rateLabel: `${ratePercent(rate)}%`,
+    rateClass: over ? "text-red-500" : "text-teal-600",
+    widthPct: clampWidth(rate),
+    fillClass: over ? "bg-red-500" : "bg-teal-500",
+    subHtml: `합계 ${totalText} · 잔여 <span class="${remClass}">${formatCurrency(remaining, currency)}</span>`,
+  });
+}
+
+// Bar 2 — actual reported spending against the month's goal.
+function actualBarHtml(data, currency) {
+  if (!isSet(data.actual_amount)) {
+    return progressRowHtml({
+      name: "실제 / 목표",
+      rateLabel: "미입력",
+      rateClass: "text-gray-400",
+      widthPct: 0,
+      fillClass: "bg-violet-500",
+      subHtml: "실제 지출 미입력",
+    });
+  }
+  const actualText = formatCurrency(Number(data.actual_amount), currency);
+  if (!isSet(data.goal_amount)) {
+    return progressRowHtml({
+      name: "실제 / 목표",
+      rateLabel: "목표 미설정",
+      rateClass: "text-gray-400",
+      widthPct: 0,
+      fillClass: "bg-violet-500",
+      subHtml: `실제 ${actualText}`,
+    });
+  }
+  const rate = Number(data.actual_usage_rate);
+  const over = rate > 1;
+  const remaining = Number(data.actual_remaining);
+  const remClass = remaining < 0 ? "text-red-500" : "text-gray-700";
+  return progressRowHtml({
+    name: "실제 / 목표",
+    rateLabel: `${ratePercent(rate)}%`,
+    rateClass: over ? "text-red-500" : "text-violet-600",
+    widthPct: clampWidth(rate),
+    fillClass: over ? "bg-red-500" : "bg-violet-500",
+    subHtml: `실제 ${actualText} · 잔여 <span class="${remClass}">${formatCurrency(remaining, currency)}</span>`,
+  });
+}
+
+// Bar 3 — composition of the planned total as a stacked fixed/variable bar.
+function compositionBarHtml(data, currency) {
+  const fixed = Number(data.fixed) || 0;
+  const variable = Number(data.variable) || 0;
+  const total = fixed + variable;
+  if (total <= 0) {
+    return `
+    <div>
+      <div class="flex items-baseline justify-between mb-1">
+        <span class="text-sm font-medium text-gray-700">고정 · 변동 구성</span>
+        <span class="text-sm font-medium text-gray-400">지출 없음</span>
+      </div>
+      <div class="h-2.5 w-full rounded-full bg-gray-100"></div>
+    </div>`;
+  }
+  const fixedPct = Math.round((fixed / total) * 100);
+  const variablePct = 100 - fixedPct;
+  return `
+    <div>
+      <div class="flex items-baseline justify-between mb-1">
+        <span class="text-sm font-medium text-gray-700">고정 · 변동 구성</span>
+        <span class="text-sm font-medium text-gray-900">${formatCurrency(total, currency)}</span>
+      </div>
+      <div class="flex h-2.5 w-full overflow-hidden rounded-full bg-gray-100">
+        <div class="h-full bg-amber-500" style="width: ${(fixed / total) * 100}%"></div>
+        <div class="h-full bg-sky-500" style="width: ${(variable / total) * 100}%"></div>
+      </div>
+      <div class="mt-1 text-xs text-gray-500">
+        <span class="text-amber-600">고정 ${formatCurrency(fixed, currency)} (${fixedPct}%)</span>
+        · <span class="text-sky-600">변동 ${formatCurrency(variable, currency)} (${variablePct}%)</span>
+      </div>
+    </div>`;
+}
+
+// Builds the dashboard summary card: three linear-progress bars visualizing the
+// planned total vs goal, actual spending vs goal, and the fixed/variable split.
+export function summaryHtml(data, currency) {
+  return `
+    <div class="bg-white rounded-2xl shadow-sm p-5 space-y-4">
+      ${goalTotalBarHtml(data, currency)}
+      ${actualBarHtml(data, currency)}
+      ${compositionBarHtml(data, currency)}
+    </div>`;
+}
+
 export function recurringEndButtonLabel(paymentType) {
   if (paymentType === PAYMENT_TYPES.annual) return "연간결제종료";
   return "월간결제종료";

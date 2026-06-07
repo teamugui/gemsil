@@ -159,7 +159,7 @@ function setupFormApp(currency) {
 }
 
 function renderEntryTitle() {
-  const titleEl = document.getElementById("entry-page-title");
+  const titleEl = document.getElementById("entry-page-title-text");
   if (!titleEl) return;
   const now = new Date();
   titleEl.textContent = `${now.getMonth() + 1}월 ${now.getDate()}일 지출입력`;
