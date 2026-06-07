@@ -23,7 +23,7 @@ export function expenseItemHtml(it, currency, editingId) {
       ? `<span class="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">고정</span>`
       : `<span class="text-xs px-2 py-0.5 rounded-full bg-sky-100 text-sky-700">변동</span>`;
   const typeLabel = PAYMENT_LABELS[it.payment_type] || it.payment_type;
-  let amountHtml = `<span class="font-semibold">${formatCurrency(it.amount, currency)}</span>`;
+  let amountHtml = `<span class="font-medium">${formatCurrency(it.amount, currency)}</span>`;
   if (it.payment_type === PAYMENT_TYPES.annual && it.full_amount) {
     amountHtml += `<div class="text-xs text-gray-400">연 ${formatCurrency(
       it.full_amount,
@@ -135,19 +135,19 @@ export function editFormHtml(it, currency) {
         <div data-component-id="expense.dashboard.edit-payment-type" class="grid grid-cols-3 gap-2" data-edit-payment-type-group="${it.id}">
           <label class="cursor-pointer">
             <input type="radio" name="edit-payment-type-${it.id}" value="once"${isChecked("once")} class="peer sr-only" />
-            <span class="flex h-full items-center justify-center text-center text-sm font-semibold py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-teal-600 peer-checked:text-white peer-checked:border-teal-600">
+            <span class="flex h-full items-center justify-center text-center text-sm font-medium py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-teal-600 peer-checked:text-white peer-checked:border-teal-600">
               일회성
             </span>
           </label>
           <label class="cursor-pointer">
             <input type="radio" name="edit-payment-type-${it.id}" value="monthly"${isChecked("monthly")} class="peer sr-only" />
-            <span class="flex h-full items-center justify-center text-center text-sm font-semibold py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-teal-600 peer-checked:text-white peer-checked:border-teal-600">
+            <span class="flex h-full items-center justify-center text-center text-sm font-medium py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-teal-600 peer-checked:text-white peer-checked:border-teal-600">
               월간
             </span>
           </label>
           <label class="cursor-pointer">
             <input type="radio" name="edit-payment-type-${it.id}" value="annual"${isChecked("annual")} class="peer sr-only" />
-            <span class="flex h-full items-center justify-center text-center text-sm font-semibold py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-teal-600 peer-checked:text-white peer-checked:border-teal-600">
+            <span class="flex h-full items-center justify-center text-center text-sm font-medium py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-teal-600 peer-checked:text-white peer-checked:border-teal-600">
               연간
             </span>
           </label>
@@ -158,14 +158,14 @@ export function editFormHtml(it, currency) {
         <button
           type="button"
           data-cancel-edit="${it.id}"
-          class="border border-gray-300 text-gray-600 font-semibold py-2.5 rounded-lg hover:bg-gray-50 transition"
+          class="border border-gray-300 text-gray-600 text-sm font-medium py-2.5 rounded-lg hover:bg-gray-50 transition"
         >
           취소
         </button>
         <button
           type="button"
           data-delete-expense="${it.id}"
-          class="border border-red-300 text-red-600 font-semibold py-2.5 rounded-lg hover:bg-red-50 transition"
+          class="border border-red-300 text-red-600 text-sm font-medium py-2.5 rounded-lg hover:bg-red-50 transition"
         >
           삭제
         </button>
@@ -178,7 +178,7 @@ export function actionRowHtml(it) {
   const submitButton = `
     <button
       type="submit"
-      class="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 rounded-lg transition"
+      class="w-full bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium py-2.5 rounded-lg transition"
     >
       수정
     </button>`;
@@ -201,7 +201,7 @@ export function fixedControlsHtml(it) {
         type="button"
         data-resume-recurring="${it.id}"
         data-recurring-controls="${it.id}"
-        class="w-full border border-gray-300 text-gray-600 font-semibold py-2.5 rounded-lg hover:bg-gray-50 transition${hidden}"
+        class="w-full border border-gray-300 text-gray-600 text-sm font-medium py-2.5 rounded-lg hover:bg-gray-50 transition${hidden}"
       >
         정기결제 재개 (계속 청구)
       </button>`;
@@ -211,7 +211,7 @@ export function fixedControlsHtml(it) {
       type="button"
       data-end-recurring="${it.id}"
       data-recurring-controls="${it.id}"
-      class="w-full border border-amber-400 text-amber-700 font-semibold py-2.5 rounded-lg hover:bg-amber-50 transition${hidden}"
+      class="w-full border border-amber-400 text-amber-700 text-sm font-medium py-2.5 rounded-lg hover:bg-amber-50 transition${hidden}"
     >
       ${recurringEndButtonLabel(it.payment_type)}
     </button>`;

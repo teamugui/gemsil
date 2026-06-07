@@ -8,38 +8,25 @@ import (
 	"gemsil/internal/model"
 )
 
-// requestMonthOrCurrent reads a ?month=YYYY-MM query param, defaulting to the
-// current month. It returns a non-empty error message for a malformed value.
-func requestMonthOrCurrent(r *http.Request) (string, string) {
-	month := r.URL.Query().Get("month")
-	if month == "" {
-		return time.Now().Format("2006-01"), ""
-	}
-	if !model.ValidYearMonth(month) {
-		return "", "월 형식이 올바르지 않습니다."
-	}
-	return month, ""
-}
-
-func (h *Handler) GetExpenseGoal(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetActualExpense(w http.ResponseWriter, r *http.Request) {
 	month, msg := requestMonthOrCurrent(r)
 	if msg != "" {
 		httpError(w, http.StatusBadRequest, msg)
 		return
 	}
 
-	goal, err := h.store.LatestExpenseGoal(month)
+	actual, err := h.store.LatestActualExpense(month)
 	if err != nil {
 		httpError(w, http.StatusInternalServerError, "조회에 실패했습니다.")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"month": month,
-		"goal":  goal,
+		"month":  month,
+		"actual": actual,
 	})
 }
 
-func (h *Handler) CreateExpenseGoal(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) CreateActualExpense(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Amount float64 `json:"amount"`
 	}
@@ -48,51 +35,51 @@ func (h *Handler) CreateExpenseGoal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if in.Amount <= 0 {
-		httpError(w, http.StatusBadRequest, "목표 금액은 0보다 커야 합니다.")
+		httpError(w, http.StatusBadRequest, "금액은 0보다 커야 합니다.")
 		return
 	}
 
 	now := time.Now()
 	month := now.Format("2006-01")
 
-	current, err := h.store.LatestExpenseGoal(month)
+	current, err := h.store.LatestActualExpense(month)
 	if err != nil {
 		httpError(w, http.StatusInternalServerError, "조회에 실패했습니다.")
 		return
 	}
 	if current != nil && current.Amount == in.Amount {
-		httpError(w, http.StatusConflict, "목표 금액이 변경되지 않았습니다.")
+		httpError(w, http.StatusConflict, "실제 지출액이 변경되지 않았습니다.")
 		return
 	}
 
-	goal := model.ExpenseGoal{
+	actual := model.ActualExpense{
 		Month:     month,
 		Amount:    in.Amount,
 		CreatedAt: now.Format(time.RFC3339),
 	}
-	id, err := h.store.CreateExpenseGoal(goal)
+	id, err := h.store.CreateActualExpense(actual)
 	if err != nil {
 		httpError(w, http.StatusInternalServerError, "저장에 실패했습니다.")
 		return
 	}
-	goal.ID = id
-	writeJSON(w, http.StatusCreated, goal)
+	actual.ID = id
+	writeJSON(w, http.StatusCreated, actual)
 }
 
-func (h *Handler) ListExpenseGoalHistory(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ListActualExpenseHistory(w http.ResponseWriter, r *http.Request) {
 	month, msg := requestMonthOrCurrent(r)
 	if msg != "" {
 		httpError(w, http.StatusBadRequest, msg)
 		return
 	}
 
-	goals, err := h.store.ListExpenseGoalHistory(month)
+	actuals, err := h.store.ListActualExpenseHistory(month)
 	if err != nil {
 		httpError(w, http.StatusInternalServerError, "조회에 실패했습니다.")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"month":   month,
-		"history": goals,
+		"history": actuals,
 	})
 }

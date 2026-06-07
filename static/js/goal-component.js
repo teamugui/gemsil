@@ -4,14 +4,13 @@ import {
   dispatchAppEvent,
   formatAmountValue,
   formatCurrency,
-  formatMonthLabel,
-  formatSavedAt,
   getCurrency,
   showToast,
 } from "./helper.js";
 
 let goalInitialized = false;
 let goalCurrency = "KRW";
+let currentGoalAmount = null;
 
 export async function initGoalComponent() {
   if (goalInitialized) return;
@@ -27,6 +26,8 @@ export async function initGoalComponent() {
     form.addEventListener("submit", handleGoalSubmit);
   }
 
+  setupGoalToggle();
+
   try {
     const currency = await getCurrency();
     if (!currency) return;
@@ -37,34 +38,45 @@ export async function initGoalComponent() {
   }
 }
 
+function setupGoalToggle() {
+  const toggle = document.getElementById("goal-toggle");
+  const form = document.getElementById("goal-form");
+  const toggleIcon = document.getElementById("goal-toggle-icon");
+  if (!toggle || !form || !toggleIcon) return;
+
+  function setGoalFormOpen(isOpen) {
+    form.style.maxHeight = isOpen ? `${form.scrollHeight}px` : "0";
+    form.style.opacity = isOpen ? "1" : "0";
+    form.style.marginTop = isOpen ? "1rem" : "0";
+    toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    toggleIcon.textContent = isOpen ? "▼" : "▶";
+  }
+
+  toggle.addEventListener("click", () => {
+    setGoalFormOpen(toggle.getAttribute("aria-expanded") !== "true");
+  });
+}
+
 async function loadCurrentGoal() {
   const data = await api("/api/expense-goals");
   renderGoal(data);
 }
 
 function renderGoal(data) {
-  const monthLabel = document.getElementById("goal-month-label");
   const amountEl = document.getElementById("goal-current-amount");
-  const noteEl = document.getElementById("goal-current-note");
   const amountInput = document.getElementById("goal-amount");
   const goal = data && data.goal;
 
-  if (monthLabel) {
-    monthLabel.textContent = formatMonthLabel(data && data.month);
-  }
-
   if (!goal) {
+    currentGoalAmount = null;
     if (amountEl) amountEl.textContent = "목표 미설정";
-    if (noteEl) noteEl.textContent = "목표를 입력해 주세요";
     if (amountInput) amountInput.value = "";
     return;
   }
 
+  currentGoalAmount = goal.amount;
   if (amountEl) {
     amountEl.textContent = formatCurrency(goal.amount, goalCurrency);
-  }
-  if (noteEl) {
-    noteEl.textContent = formatSavedAt(goal.created_at);
   }
   if (amountInput) {
     amountInput.value = formatAmountValue(goal.amount);
@@ -72,10 +84,7 @@ function renderGoal(data) {
 }
 
 function renderGoalError(message) {
-  const noteEl = document.getElementById("goal-current-note");
-  if (noteEl) {
-    noteEl.textContent = message || "목표를 불러오지 못했습니다.";
-  }
+  showToast(message || "목표를 불러오지 못했습니다.", true);
 }
 
 async function handleGoalSubmit(e) {
@@ -85,6 +94,10 @@ async function handleGoalSubmit(e) {
   if (!Number.isFinite(amount) || amount <= 0) {
     showToast("목표 금액을 입력하세요.", true);
     if (amountInput) amountInput.focus();
+    return;
+  }
+  if (currentGoalAmount !== null && amount === currentGoalAmount) {
+    showToast("변경된 내용이 없습니다.", true);
     return;
   }
 

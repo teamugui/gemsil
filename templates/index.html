@@ -14,7 +14,7 @@
       class="hidden fixed inset-0 bg-white z-40 flex items-center justify-center p-6"
     >
       <div class="max-w-sm w-full text-center">
-        <h1 class="text-3xl font-bold mb-2">gemsil</h1>
+        <h1 class="text-3xl font-medium mb-2">gemsil</h1>
         <p class="text-gray-500 mb-8">
           사용할 기준 통화를 선택하세요.<br />
           한 번 설정하면 변경할 수 없습니다.
@@ -25,7 +25,7 @@
             class="py-8 rounded-2xl border-2 border-gray-200 hover:border-teal-500 hover:bg-teal-50 transition"
           >
             <div class="text-4xl mb-1">₩</div>
-            <div class="font-semibold">KRW</div>
+            <div class="font-medium">KRW</div>
             <div class="text-xs text-gray-400">대한민국 원</div>
           </button>
           <button
@@ -33,7 +33,7 @@
             class="py-8 rounded-2xl border-2 border-gray-200 hover:border-teal-500 hover:bg-teal-50 transition"
           >
             <div class="text-4xl mb-1">¥</div>
-            <div class="font-semibold">JPY</div>
+            <div class="font-medium">JPY</div>
             <div class="text-xs text-gray-400">일본 엔</div>
           </button>
         </div>
@@ -43,14 +43,14 @@
     <!-- Main app -->
     <div id="main-app" data-component-id="app.shell" class="hidden max-w-5xl mx-auto p-4 lg:p-8">
       <header class="hidden lg:block py-4 mb-4">
-        <h1 class="text-2xl font-bold">gemsil</h1>
+        <h1 class="text-2xl font-medium">gemsil</h1>
       </header>
 
       <div class="lg:grid lg:grid-cols-2 lg:gap-8 lg:items-start">
         
         <!-- Input Section -->
         <section id="tab-input" data-component-id="expense.input.section" class="block">
-          <h2 id="entry-page-title" class="text-xl font-bold mb-4">지출 입력</h2>
+          <h2 id="entry-page-title" class="text-xl font-medium mb-4">지출 입력</h2>
           
           <form id="expense-form" data-component-id="expense.input.form" class="bg-white rounded-2xl shadow-sm p-5 space-y-4">
             <div class="grid grid-cols-2 gap-3">
@@ -100,7 +100,7 @@
               </button>
               <div
                 id="optional-fields"
-                class="overflow-hidden transition-all duration-500 ease-in-out"
+                class="overflow-hidden transition-all duration-[250ms] ease-in-out"
                 style="max-height: 0; opacity: 0; margin-top: 0"
               >
                 <label for="description" class="sr-only">지출 설명</label>
@@ -117,54 +117,103 @@
               <div data-component-id="expense.input.payment-type" class="grid grid-cols-3 gap-2">
                 <label class="cursor-pointer">
                   <input type="radio" name="payment_type" value="once" checked class="peer sr-only" />
-                  <span class="flex h-full items-center justify-center text-center text-sm font-semibold py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-teal-600 peer-checked:text-white peer-checked:border-teal-600">일회성</span>
+                  <span class="flex h-full items-center justify-center text-center text-sm font-medium py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-teal-600 peer-checked:text-white peer-checked:border-teal-600">일회성</span>
                 </label>
                 <label class="cursor-pointer">
                   <input type="radio" name="payment_type" value="monthly" class="peer sr-only" />
-                  <span class="flex h-full items-center justify-center text-center text-sm font-semibold py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-teal-600 peer-checked:text-white peer-checked:border-teal-600">월간</span>
+                  <span class="flex h-full items-center justify-center text-center text-sm font-medium py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-teal-600 peer-checked:text-white peer-checked:border-teal-600">월간</span>
                 </label>
                 <label class="cursor-pointer">
                   <input type="radio" name="payment_type" value="annual" class="peer sr-only" />
-                  <span class="flex h-full items-center justify-center text-center text-sm font-semibold py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-teal-600 peer-checked:text-white peer-checked:border-teal-600">연간</span>
+                  <span class="flex h-full items-center justify-center text-center text-sm font-medium py-2.5 px-2 rounded-lg border border-gray-300 text-gray-600 leading-tight transition hover:bg-gray-50 peer-checked:bg-teal-600 peer-checked:text-white peer-checked:border-teal-600">연간</span>
                 </label>
               </div>
             </div>
             <button
               type="submit"
-              class="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 rounded-lg transition"
+              class="w-full bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium py-2.5 rounded-lg transition"
             >
               저장
             </button>
           </form>
 
           <!-- Expense goal -->
-          <div data-component-id="expense.goal.current" class="mt-4 bg-white rounded-2xl shadow-sm p-5 space-y-4">
-            <div class="flex items-start justify-between gap-3">
-              <div>
-                <h3 class="font-medium text-sm">이번 달 지출목표</h3>
-                <p id="goal-month-label" class="text-xs text-gray-400 mt-0.5">-</p>
+          <div data-component-id="expense.goal.current" class="mt-4 bg-white rounded-2xl shadow-sm p-5">
+            <button
+              id="goal-toggle"
+              type="button"
+              aria-expanded="false"
+              aria-controls="goal-form"
+              class="w-full flex items-center justify-between gap-3 text-left"
+            >
+              <span class="flex items-center gap-1">
+                <span id="goal-toggle-icon" class="text-sm text-gray-600">▶</span>
+                <span class="font-medium text-sm">이번 달 지출목표</span>
+              </span>
+              <span id="goal-current-amount" class="font-medium text-sm text-gray-900">목표 미설정</span>
+            </button>
+            <form
+              id="goal-form"
+              class="overflow-hidden transition-all duration-[250ms] ease-in-out"
+              style="max-height: 0; opacity: 0; margin-top: 0"
+            >
+              <div class="flex gap-2">
+                <input
+                  id="goal-amount"
+                  type="number"
+                  step="any"
+                  min="0"
+                  inputmode="decimal"
+                  placeholder="예시 : 1200000"
+                  class="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"
+                />
+                <button
+                  type="submit"
+                  class="shrink-0 bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition"
+                >
+                  저장
+                </button>
               </div>
-              <div class="text-right">
-                <div id="goal-current-amount" class="font-semibold text-gray-900">목표 미설정</div>
-                <div id="goal-current-note" class="text-xs text-gray-400 mt-0.5">목표를 입력해 주세요</div>
+            </form>
+          </div>
+
+          <!-- Actual spending -->
+          <div data-component-id="expense.actual.current" class="mt-4 bg-white rounded-2xl shadow-sm p-5">
+            <button
+              id="actual-toggle"
+              type="button"
+              aria-expanded="false"
+              aria-controls="actual-form"
+              class="w-full flex items-center justify-between gap-3 text-left"
+            >
+              <span class="flex items-center gap-1">
+                <span id="actual-toggle-icon" class="text-sm text-gray-600">▶</span>
+                <span class="font-medium text-sm">이번 달 실제 지출액</span>
+              </span>
+              <span id="actual-current-amount" class="font-medium text-sm text-gray-900">미입력</span>
+            </button>
+            <form
+              id="actual-form"
+              class="overflow-hidden transition-all duration-[250ms] ease-in-out"
+              style="max-height: 0; opacity: 0; margin-top: 0"
+            >
+              <div class="flex gap-2">
+                <input
+                  id="actual-amount"
+                  type="number"
+                  step="any"
+                  min="0"
+                  inputmode="decimal"
+                  placeholder="예시 : 1200000"
+                  class="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"
+                />
+                <button
+                  type="submit"
+                  class="shrink-0 bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition"
+                >
+                  저장
+                </button>
               </div>
-            </div>
-            <form id="goal-form" class="flex gap-2">
-              <input
-                id="goal-amount"
-                type="number"
-                step="any"
-                min="0"
-                inputmode="decimal"
-                placeholder="예시 : 1200000"
-                class="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"
-              />
-              <button
-                type="submit"
-                class="shrink-0 bg-teal-600 hover:bg-teal-700 text-white font-semibold px-4 py-2 rounded-lg transition"
-              >
-                저장
-              </button>
             </form>
           </div>
 
@@ -188,7 +237,7 @@
             <div
               id="fx-panel"
               data-component-id="expense.fx.panel"
-              class="overflow-hidden transition-all duration-500 ease-in-out space-y-3"
+              class="overflow-hidden transition-all duration-[250ms] ease-in-out space-y-3"
               style="max-height: 0; opacity: 0; margin-top: 0"
             >
               <div class="flex gap-2">
@@ -204,7 +253,7 @@
                 <button
                   id="fx-calc-btn"
                   type="button"
-                  class="shrink-0 bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg transition"
+                  class="shrink-0 bg-gray-800 hover:bg-gray-900 text-white text-sm px-4 py-2 rounded-lg transition"
                 >
                   계산
                 </button>
@@ -213,7 +262,7 @@
                 id="fx-apply-btn"
                 type="button"
                 disabled
-                class="w-full border border-gray-300 text-gray-400 py-2 rounded-lg transition disabled:cursor-not-allowed disabled:bg-gray-50 enabled:border-teal-500 enabled:text-teal-600 enabled:hover:bg-teal-50"
+                class="w-full border border-gray-300 text-gray-400 text-sm py-2 rounded-lg transition disabled:cursor-not-allowed disabled:bg-gray-50 enabled:border-teal-500 enabled:text-teal-600 enabled:hover:bg-teal-50"
               >
                 계산할 금액을 입력해주세요
               </button>
@@ -226,7 +275,7 @@
 
         <!-- Dashboard Section -->
         <section id="tab-dashboard" data-component-id="expense.dashboard.section" class="hidden lg:block">
-          <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+          <h2 class="text-xl font-medium mb-4 flex items-center gap-2">
             대시보드
             <select
               id="month-select"
@@ -237,7 +286,7 @@
           <!-- Summary row -->
           <div
             data-component-id="expense.dashboard.summary"
-            class="mb-4 flex flex-wrap items-center justify-center gap-2 rounded-2xl bg-white p-4 text-sm font-semibold text-gray-700 shadow-sm"
+            class="mb-4 flex flex-wrap items-center justify-center gap-2 rounded-2xl bg-white p-4 text-sm font-medium text-gray-700 shadow-sm"
           >
             <span>고정 <span id="fixed-amount" class="text-amber-600">-</span></span>
             <span class="text-gray-300">+</span>
@@ -262,11 +311,11 @@
       
       <!-- Mobile Bottom Navigation -->
       <nav data-component-id="app.mobile-nav" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex lg:hidden z-30 pb-safe">
-        <button id="nav-input" class="flex-1 py-3 flex flex-col items-center justify-center gap-1 text-teal-600 font-semibold transition">
+        <button id="nav-input" class="flex-1 py-3 flex flex-col items-center justify-center gap-1 text-teal-600 font-medium transition">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
           <span class="text-[10px]">입력</span>
         </button>
-        <button id="nav-dashboard" class="flex-1 py-3 flex flex-col items-center justify-center gap-1 text-gray-400 font-semibold transition">
+        <button id="nav-dashboard" class="flex-1 py-3 flex flex-col items-center justify-center gap-1 text-gray-400 font-medium transition">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
           <span class="text-[10px]">대시보드</span>
         </button>

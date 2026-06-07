@@ -43,6 +43,16 @@ type ExpenseGoal struct {
 	CreatedAt string  `json:"created_at"`
 }
 
+// ActualExpense is a monthly actual-spending snapshot: the total amount the user
+// reports having actually paid this month. Edits are append-only, like
+// ExpenseGoal — the newest snapshot for a month is the active value.
+type ActualExpense struct {
+	ID        int64   `json:"id"`
+	Month     string  `json:"month"`
+	Amount    float64 `json:"amount"`
+	CreatedAt string  `json:"created_at"`
+}
+
 // AllowedTypes is the set of valid payment_type values.
 var AllowedTypes = map[string]bool{"once": true, "monthly": true, "annual": true}
 

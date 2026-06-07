@@ -1,3 +1,4 @@
+import { initActualComponent } from "./actual-component.js";
 import { initDashboardComponent } from "./dashboard-component.js";
 import { initFormComponent } from "./form-component.js";
 import { initGoalComponent } from "./goal-component.js";
@@ -51,3 +52,4 @@ initMobileTabs();
 initDashboardComponent();
 initFormComponent();
 initGoalComponent();
+initActualComponent();

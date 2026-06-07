@@ -284,6 +284,110 @@ func TestCreateExpenseGoalRejectsNonPositiveAmount(t *testing.T) {
 	}
 }
 
+func TestCreateExpenseGoalRejectsUnchangedAmount(t *testing.T) {
+	h, db := setupTestHandler(t)
+	currentMonth := time.Now().Format("2006-01")
+
+	if rec := postExpenseGoal(t, h, `{"amount":100}`); rec.Code != http.StatusCreated {
+		t.Fatalf("first goal status = %d: %s", rec.Code, rec.Body.String())
+	}
+	if rec := postExpenseGoal(t, h, `{"amount":100}`); rec.Code != http.StatusConflict {
+		t.Fatalf("unchanged goal status = %d, want 409; body=%s", rec.Code, rec.Body.String())
+	}
+	if rec := postExpenseGoal(t, h, `{"amount":150}`); rec.Code != http.StatusCreated {
+		t.Fatalf("changed goal status = %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var count int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM expense_goals WHERE month = ?`, currentMonth).Scan(&count); err != nil {
+		t.Fatalf("count goals: %v", err)
+	}
+	if count != 2 {
+		t.Fatalf("goal row count = %d, want 2 (unchanged submission must not insert)", count)
+	}
+}
+
+func postActualExpense(t *testing.T, h *Handler, body string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, "/api/actual-expenses", bytes.NewBufferString(body))
+	rec := httptest.NewRecorder()
+	h.CreateActualExpense(rec, req)
+	return rec
+}
+
+func getActualExpenseForMonth(t *testing.T, h *Handler, month string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, "/api/actual-expenses?month="+month, nil)
+	rec := httptest.NewRecorder()
+	h.GetActualExpense(rec, req)
+	return rec
+}
+
+func TestActualExpenseSnapshotsLatest(t *testing.T) {
+	h, db := setupTestHandler(t)
+	currentMonth := time.Now().Format("2006-01")
+
+	if rec := postActualExpense(t, h, `{"amount":100}`); rec.Code != http.StatusCreated {
+		t.Fatalf("first actual status = %d: %s", rec.Code, rec.Body.String())
+	}
+	if rec := postActualExpense(t, h, `{"amount":150}`); rec.Code != http.StatusCreated {
+		t.Fatalf("second actual status = %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var count int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM actual_expenses WHERE month = ?`, currentMonth).Scan(&count); err != nil {
+		t.Fatalf("count actuals: %v", err)
+	}
+	if count != 2 {
+		t.Fatalf("actual row count = %d, want 2", count)
+	}
+
+	rec := getActualExpenseForMonth(t, h, currentMonth)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("get actual status = %d: %s", rec.Code, rec.Body.String())
+	}
+	var out struct {
+		Actual *model.ActualExpense `json:"actual"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if out.Actual == nil || out.Actual.Amount != 150 {
+		t.Fatalf("latest actual = %+v, want amount 150", out.Actual)
+	}
+}
+
+func TestCreateActualExpenseRejectsNonPositiveAmount(t *testing.T) {
+	h, _ := setupTestHandler(t)
+	rec := postActualExpense(t, h, `{"amount":0}`)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400; body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestCreateActualExpenseRejectsUnchangedAmount(t *testing.T) {
+	h, db := setupTestHandler(t)
+	currentMonth := time.Now().Format("2006-01")
+
+	if rec := postActualExpense(t, h, `{"amount":100}`); rec.Code != http.StatusCreated {
+		t.Fatalf("first actual status = %d: %s", rec.Code, rec.Body.String())
+	}
+	if rec := postActualExpense(t, h, `{"amount":100}`); rec.Code != http.StatusConflict {
+		t.Fatalf("unchanged actual status = %d, want 409; body=%s", rec.Code, rec.Body.String())
+	}
+	if rec := postActualExpense(t, h, `{"amount":150}`); rec.Code != http.StatusCreated {
+		t.Fatalf("changed actual status = %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var count int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM actual_expenses WHERE month = ?`, currentMonth).Scan(&count); err != nil {
+		t.Fatalf("count actuals: %v", err)
+	}
+	if count != 2 {
+		t.Fatalf("actual row count = %d, want 2 (unchanged submission must not insert)", count)
+	}
+}
+
 func TestUpdateSetsEndMonthToCancel(t *testing.T) {
 	h, _ := setupTestHandler(t)
 	rec := postExpense(t, h, `{"amount":100,"payment_type":"monthly","start_month":"2026-01"}`)

@@ -61,3 +61,19 @@ func TestSchemaCreatesExpenseGoals(t *testing.T) {
 		t.Fatalf("table name = %q, want expense_goals", name)
 	}
 }
+
+func TestSchemaCreatesActualExpenses(t *testing.T) {
+	s, err := Open(filepath.Join(t.TempDir(), "test.db"))
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer s.Close()
+
+	var name string
+	if err := s.db.QueryRow(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'actual_expenses'`).Scan(&name); err != nil {
+		t.Fatalf("actual_expenses table: %v", err)
+	}
+	if name != "actual_expenses" {
+		t.Fatalf("table name = %q, want actual_expenses", name)
+	}
+}

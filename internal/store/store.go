@@ -60,6 +60,12 @@ CREATE TABLE IF NOT EXISTS expense_goals (
 	month      TEXT NOT NULL,
 	amount     REAL NOT NULL CHECK(amount > 0),
 	created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS actual_expenses (
+	id         INTEGER PRIMARY KEY AUTOINCREMENT,
+	month      TEXT NOT NULL,
+	amount     REAL NOT NULL CHECK(amount > 0),
+	created_at TEXT NOT NULL
 );`
 	if _, err := d.Exec(schema); err != nil {
 		return err
