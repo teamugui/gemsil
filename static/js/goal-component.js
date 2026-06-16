@@ -71,16 +71,23 @@ function renderGoal(data) {
     currentGoalAmount = null;
     if (amountEl) amountEl.textContent = "목표 미설정";
     if (amountInput) amountInput.value = "";
-    return;
+  } else {
+    currentGoalAmount = goal.amount;
+    if (amountEl) {
+      amountEl.textContent = formatCurrency(goal.amount, goalCurrency);
+    }
+    if (amountInput) {
+      amountInput.value = formatAmountValue(goal.amount);
+    }
   }
 
-  currentGoalAmount = goal.amount;
-  if (amountEl) {
-    amountEl.textContent = formatCurrency(goal.amount, goalCurrency);
+  const titleLabel = document.getElementById("goal-title-label");
+  if (titleLabel && data && data.month) {
+    const monthNum = parseInt(data.month.split("-")[1], 10);
+    titleLabel.textContent = `${monthNum}월의 지출목표`;
   }
-  if (amountInput) {
-    amountInput.value = formatAmountValue(goal.amount);
-  }
+
+
 }
 
 function renderGoalError(message) {

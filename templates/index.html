@@ -73,7 +73,7 @@
                   inputmode="decimal"
                   required
                   placeholder="예시 : 15000"
-                  class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-inset focus:ring-teal-400"
                 />
               </div>
               <div>
@@ -84,7 +84,7 @@
                     type="text"
                     autocomplete="off"
                     placeholder="예시 : 카페"
-                    class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"
+                    class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-inset focus:ring-teal-400"
                   />
                   <ul
                     id="merchant-suggestions"
@@ -123,7 +123,7 @@
                   id="description"
                   type="text"
                   placeholder="예시 : 친구와 점심에 커피"
-                  class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-inset focus:ring-teal-400"
                 />
               </div>
             </div>
@@ -152,6 +152,63 @@
             </button>
           </form>
 
+          <h2 class="text-xl font-medium mt-8 mb-4">부가기능</h2>
+
+          <!-- Exchange rate calculator -->
+          <div data-component-id="expense.fx.calculator" class="bg-white rounded-2xl shadow-sm p-5">
+            <button
+              id="fx-toggle"
+              type="button"
+              aria-expanded="false"
+              aria-controls="fx-panel"
+              class="w-full flex items-center justify-between text-left"
+            >
+              <span class="flex items-center gap-1">
+                <span id="fx-toggle-icon">▶</span>
+                <span class="font-medium text-sm">환율 계산하기</span>
+              </span>
+              <span class="text-gray-400 text-sm">
+                <span id="fx-from-currency">USD</span> → <span data-base-currency>KRW</span>
+              </span>
+            </button>
+            <div
+              id="fx-panel"
+              data-component-id="expense.fx.panel"
+              class="overflow-hidden transition-all duration-[250ms] ease-in-out space-y-3"
+              style="max-height: 0; opacity: 0; margin-top: 0"
+            >
+              <div class="flex gap-2">
+                <input
+                  id="fx-amount"
+                  type="number"
+                  step="any"
+                  min="0"
+                  placeholder="예시 : 49.99"
+                  class="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-inset focus:ring-teal-400"
+                />
+                <select id="fx-currency" class="shrink-0 rounded-lg border border-gray-300 px-2 py-2 bg-white focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-inset focus:ring-teal-400"></select>
+                <button
+                  id="fx-calc-btn"
+                  type="button"
+                  class="shrink-0 bg-gray-800 hover:bg-gray-900 text-white text-sm px-4 py-2 rounded-lg transition"
+                >
+                  계산
+                </button>
+              </div>
+              <button
+                id="fx-apply-btn"
+                type="button"
+                disabled
+                class="w-full border border-gray-300 text-gray-400 text-sm py-2 rounded-lg transition disabled:cursor-not-allowed disabled:bg-gray-50 enabled:border-teal-500 enabled:text-teal-600 enabled:hover:bg-teal-50"
+              >
+                계산할 금액을 입력해주세요
+              </button>
+              <p id="fx-rate-note" class="text-xs text-gray-400 text-center">
+                환율은 참고용입니다. 변환된 금액을 확인 후 입력하세요.
+              </p>
+            </div>
+          </div>
+
           <!-- Expense goal -->
           <div data-component-id="expense.goal.current" class="mt-4 bg-white rounded-2xl shadow-sm p-5">
             <button
@@ -163,7 +220,7 @@
             >
               <span class="flex items-center gap-1">
                 <span id="goal-toggle-icon" class="text-sm text-gray-600">▶</span>
-                <span class="font-medium text-sm">이번 달 지출목표</span>
+                <span class="font-medium text-sm" id="goal-title-label">이번 달의 지출목표</span>
               </span>
               <span id="goal-current-amount" class="font-medium text-sm text-gray-900">목표 미설정</span>
             </button>
@@ -180,7 +237,7 @@
                   min="0"
                   inputmode="decimal"
                   placeholder="예시 : 1200000"
-                  class="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  class="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-inset focus:ring-teal-400"
                 />
                 <button
                   type="submit"
@@ -203,7 +260,7 @@
             >
               <span class="flex items-center gap-1">
                 <span id="actual-toggle-icon" class="text-sm text-gray-600">▶</span>
-                <span class="font-medium text-sm">이번 달 실제 지출액</span>
+                <span class="font-medium text-sm" id="actual-title-label">이번 달의 실제 지출액</span>
               </span>
               <span id="actual-current-amount" class="font-medium text-sm text-gray-900">미입력</span>
             </button>
@@ -220,7 +277,7 @@
                   min="0"
                   inputmode="decimal"
                   placeholder="예시 : 1200000"
-                  class="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  class="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-inset focus:ring-teal-400"
                 />
                 <button
                   type="submit"
@@ -231,61 +288,6 @@
               </div>
             </form>
           </div>
-
-          <!-- Exchange rate calculator -->
-          <div data-component-id="expense.fx.calculator" class="mt-4 bg-white rounded-2xl shadow-sm p-5">
-            <button
-              id="fx-toggle"
-              type="button"
-              aria-expanded="false"
-              aria-controls="fx-panel"
-              class="w-full flex items-center justify-between text-left"
-            >
-              <span class="flex items-center gap-1">
-                <span id="fx-toggle-icon">▶</span>
-                <span class="font-medium text-sm">환율 계산기</span>
-              </span>
-              <span class="text-gray-400 text-sm">
-                <span id="fx-from-currency">USD</span> → <span data-base-currency>KRW</span>
-              </span>
-            </button>
-            <div
-              id="fx-panel"
-              data-component-id="expense.fx.panel"
-              class="overflow-hidden transition-all duration-[250ms] ease-in-out space-y-3"
-              style="max-height: 0; opacity: 0; margin-top: 0"
-            >
-              <div class="flex gap-2">
-                <input
-                  id="fx-amount"
-                  type="number"
-                  step="any"
-                  min="0"
-                  placeholder="예시 : 49.99"
-                  class="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"
-                />
-                <select id="fx-currency" class="shrink-0 rounded-lg border border-gray-300 px-2 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-teal-400"></select>
-                <button
-                  id="fx-calc-btn"
-                  type="button"
-                  class="shrink-0 bg-gray-800 hover:bg-gray-900 text-white text-sm px-4 py-2 rounded-lg transition"
-                >
-                  계산
-                </button>
-              </div>
-              <button
-                id="fx-apply-btn"
-                type="button"
-                disabled
-                class="w-full border border-gray-300 text-gray-400 text-sm py-2 rounded-lg transition disabled:cursor-not-allowed disabled:bg-gray-50 enabled:border-teal-500 enabled:text-teal-600 enabled:hover:bg-teal-50"
-              >
-                계산할 금액을 입력해주세요
-              </button>
-              <p id="fx-rate-note" class="text-xs text-gray-400 text-center">
-                환율은 참고용입니다. 변환된 금액을 확인 후 입력하세요.
-              </p>
-            </div>
-          </div>
         </section>
 
         <!-- Dashboard Section -->
@@ -293,10 +295,21 @@
           <h2 class="text-xl font-medium mb-4 flex items-center justify-between gap-2">
             <span class="flex items-center gap-2">
               대시보드
-              <select
-                id="month-select"
-                class="text-sm font-normal text-gray-600 border border-gray-200 rounded-full px-3 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-teal-400"
-              ></select>
+              <div class="relative inline-block text-left" id="month-dropdown-container">
+                <input type="hidden" id="month-select" value="" />
+                <button
+                  id="month-dropdown-btn"
+                  type="button"
+                  class="flex items-center gap-1 text-sm font-normal text-gray-600 border border-gray-200 rounded-full px-3 py-1 bg-white focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-inset focus:ring-teal-400 hover:bg-gray-50 transition"
+                >
+                  <span id="month-dropdown-label">월 선택</span>
+                  <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <ul
+                  id="month-dropdown-menu"
+                  class="hidden absolute left-0 mt-1 z-20 w-32 max-h-56 overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg text-sm py-1"
+                ></ul>
+              </div>
             </span>
             <button id="nav-to-input" type="button" class="lg:hidden flex items-center gap-1 text-sm font-medium text-teal-600">
               ←

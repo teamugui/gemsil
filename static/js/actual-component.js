@@ -71,16 +71,23 @@ function renderActual(data) {
     currentActualAmount = null;
     if (amountEl) amountEl.textContent = "미입력";
     if (amountInput) amountInput.value = "";
-    return;
+  } else {
+    currentActualAmount = actual.amount;
+    if (amountEl) {
+      amountEl.textContent = formatCurrency(actual.amount, actualCurrency);
+    }
+    if (amountInput) {
+      amountInput.value = formatAmountValue(actual.amount);
+    }
   }
 
-  currentActualAmount = actual.amount;
-  if (amountEl) {
-    amountEl.textContent = formatCurrency(actual.amount, actualCurrency);
+  const titleLabel = document.getElementById("actual-title-label");
+  if (titleLabel && data && data.month) {
+    const monthNum = parseInt(data.month.split("-")[1], 10);
+    titleLabel.textContent = `${monthNum}월의 실제 지출액`;
   }
-  if (amountInput) {
-    amountInput.value = formatAmountValue(actual.amount);
-  }
+
+
 }
 
 function renderActualError(message) {

@@ -247,12 +247,13 @@ export function expenseItemHtml(it, currency, editingId) {
                   )}</span>
                   <button
                     type="button"
-                    data-edit-expense="${it.id}"
-                    class="rounded px-1 text-gray-400 hover:bg-gray-100 hover:text-teal-600"
-                    aria-label="지출 내역 수정"
-                    title="수정"
+                    ${it.id === editingId ? `data-cancel-edit="${it.id}"` : `data-edit-expense="${it.id}"`}
+                    class="rounded px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100 hover:text-teal-600 flex items-center gap-1 transition-colors"
+                    aria-label="${it.id === editingId ? '수정 닫기' : '지출 내역 수정'}"
+                    title="${it.id === editingId ? '닫기' : '수정'}"
                   >
-                    ✎
+                    <span class="text-[14px]">✎</span>
+                    <span>${it.id === editingId ? '닫기' : '수정'}</span>
                   </button>
                 </div>
               </div>
@@ -296,7 +297,7 @@ export function editFormHtml(it, currency) {
             value="${escapeHtml(amountValue)}"
             placeholder="얼마를 썼습니까"
             data-edit-amount-input="${it.id}"
-            class="w-full bg-gray-50 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"
+            class="w-full bg-gray-50 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-inset focus:ring-teal-400"
           />
         </div>
         <div>
@@ -306,7 +307,7 @@ export function editFormHtml(it, currency) {
             type="text"
             value="${escapeHtml(it.merchant)}"
             placeholder="어디에 썼습니까"
-            class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"
+            class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-inset focus:ring-teal-400"
           />
         </div>
         ${amountQuickButtons}
@@ -318,7 +319,7 @@ export function editFormHtml(it, currency) {
           type="text"
           value="${escapeHtml(it.description)}"
           placeholder="설명을 해주세요"
-          class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400"
+          class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-inset focus:ring-teal-400"
         />
       </div>
       <div>

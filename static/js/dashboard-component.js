@@ -26,9 +26,32 @@ export async function initDashboardComponent() {
 
   await loadDashboard();
 
-  const sel = document.getElementById("month-select");
-  if (sel) {
-    sel.addEventListener("change", () => loadDashboard(sel.value));
+  const btn = document.getElementById("month-dropdown-btn");
+  const menu = document.getElementById("month-dropdown-menu");
+  if (btn && menu) {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      menu.classList.toggle("hidden");
+    });
+    document.addEventListener("click", (e) => {
+      if (!btn.contains(e.target) && !menu.contains(e.target)) {
+        menu.classList.add("hidden");
+      }
+    });
+    menu.addEventListener("click", (e) => {
+      const optionBtn = e.target.closest("button[data-month-val]");
+      if (optionBtn) {
+        const val = optionBtn.getAttribute("data-month-val");
+        const hiddenInput = document.getElementById("month-select");
+        if (hiddenInput && hiddenInput.value !== val) {
+          hiddenInput.value = val;
+          menu.classList.add("hidden");
+          loadDashboard(val);
+        } else {
+          menu.classList.add("hidden");
+        }
+      }
+    });
   }
 
   document.querySelectorAll("[data-filter]").forEach((btn) => {
@@ -66,12 +89,16 @@ async function loadDashboard(month) {
     dashboardCurrency = data.currency || "KRW";
     dashboardItems = data.items || [];
 
-    const sel = document.getElementById("month-select");
-    if (sel) {
-      sel.innerHTML = (data.months || [])
+    const hiddenInput = document.getElementById("month-select");
+    const label = document.getElementById("month-dropdown-label");
+    const menu = document.getElementById("month-dropdown-menu");
+    if (hiddenInput && label && menu) {
+      hiddenInput.value = data.month || "";
+      label.textContent = data.month ? formatMonthLabel(data.month) : "월 선택";
+      menu.innerHTML = (data.months || [])
         .map(
           (m) =>
-            `<option value="${m}"${m === data.month ? " selected" : ""}>${formatMonthLabel(m)}</option>`,
+            `<li><button type="button" data-month-val="${m}" class="w-full text-left px-4 py-2 hover:bg-gray-50 transition${m === data.month ? " font-medium text-teal-600 bg-teal-50" : ""}">${formatMonthLabel(m)}</button></li>`,
         )
         .join("");
     }
